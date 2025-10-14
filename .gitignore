@@ -1,0 +1,6 @@
+# Secrets (remember to keep real keys out of source control)
+glowup/Secrets.plist
+glowup/Secrets.swift.local
+
+# Xcode user data
+*.xcuserdata/

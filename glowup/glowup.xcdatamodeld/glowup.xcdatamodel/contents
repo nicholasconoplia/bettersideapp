@@ -1,9 +1,66 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="false" userDefinedModelVersionIdentifier="">
-    <entity name="Item" representedClassName="Item" syncable="YES" codeGenerationType="class">
-        <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    <entity name="ConversationEntry" representedClassName="ConversationEntry" syncable="YES" codeGenerationType="class">
+        <attribute name="role" optional="NO" attributeType="String"/>
+        <attribute name="text" optional="NO" attributeType="String"/>
+        <attribute name="timestamp" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
     </entity>
+    <entity name="DailyStreak" representedClassName="DailyStreak" syncable="YES" codeGenerationType="class">
+        <attribute name="currentCount" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="lastUpdateDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="GlowProfile" representedClassName="GlowProfile" syncable="YES" codeGenerationType="class">
+        <attribute name="bestAngleTilt" optional="YES" attributeType="Double" usesScalarValueType="YES"/>
+        <attribute name="colorPalette" optional="YES" attributeType="String"/>
+        <attribute name="faceShape" optional="YES" attributeType="String"/>
+        <attribute name="optimalLightingDesc" optional="YES" attributeType="String"/>
+        <attribute name="theme" optional="YES" attributeType="String"/>
+        <attribute name="skinUndertone" optional="YES" attributeType="String"/>
+        <attribute name="eyeColor" optional="YES" attributeType="String"/>
+        <attribute name="hairColor" optional="YES" attributeType="String"/>
+        <attribute name="bestColors" optional="YES" attributeType="String"/>
+        <attribute name="avoidColors" optional="YES" attributeType="String"/>
+        <attribute name="makeupStyle" optional="YES" attributeType="String"/>
+    </entity>
+    <entity name="OnboardingQuiz" representedClassName="OnboardingQuiz" syncable="YES" codeGenerationType="class">
+        <attribute name="answers" optional="YES" attributeType="Transformable" attributeValueClassName="NSDictionary"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="targetGoal" optional="YES" attributeType="String"/>
+        <attribute name="userName" optional="YES" attributeType="String"/>
+        <attribute name="age" optional="YES" attributeType="Integer 16" usesScalarValueType="YES"/>
+    </entity>
+    <entity name="PhotoSession" representedClassName="PhotoSession" syncable="YES" codeGenerationType="class">
+        <attribute name="analysisData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="aiSummary" optional="YES" attributeType="String"/>
+        <attribute name="confidenceScore" optional="YES" attributeType="Double" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="originalImage" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="sessionType" optional="YES" attributeType="String"/>
+        <attribute name="startTime" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="TipEntry" representedClassName="TipEntry" syncable="YES" codeGenerationType="class">
+        <attribute name="body" optional="NO" attributeType="String"/>
+        <attribute name="completed" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="String"/>
+        <attribute name="source" optional="YES" attributeType="String"/>
+        <attribute name="title" optional="NO" attributeType="String"/>
+        <attribute name="type" optional="NO" attributeType="String"/>
+    </entity>
+    <entity name="UserSettings" representedClassName="UserSettings" syncable="YES" codeGenerationType="class">
+        <attribute name="coachPersonaID" optional="YES" attributeType="String"/>
+        <attribute name="isProSubscriber" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="lastSessionDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="onboardingComplete" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+    </entity>
+    <fetchRequest name="allTips" entity="TipEntry" predicateString="TRUEPREDICATE" sortDescriptors="[]"/>
     <elements>
-        <element name="Item" positionX="-63" positionY="-18" width="128" height="44"/>
+        <element name="UserSettings" positionX="-63" positionY="-18" width="128" height="134"/>
+        <element name="OnboardingQuiz" positionX="107" positionY="-18" width="128" height="88"/>
+        <element name="GlowProfile" positionX="277" positionY="-18" width="128" height="118"/>
+        <element name="PhotoSession" positionX="-63" positionY="174" width="128" height="148"/>
+        <element name="DailyStreak" positionX="107" positionY="174" width="128" height="118"/>
+        <element name="TipEntry" positionX="277" positionY="174" width="128" height="178"/>
+        <element name="ConversationEntry" positionX="447" positionY="174" width="128" height="118"/>
     </elements>
 </model>

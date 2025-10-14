@@ -4,7 +4,6 @@
 //
 //  Created by Nick Conoplia on 13/10/2025.
 //
-
 import CoreData
 
 struct PersistenceController {
@@ -12,46 +11,91 @@ struct PersistenceController {
 
     @MainActor
     static let preview: PersistenceController = {
-        let result = PersistenceController(inMemory: true)
-        let viewContext = result.container.viewContext
-        for _ in 0..<10 {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-        }
+        let controller = PersistenceController(inMemory: true)
+        let context = controller.container.viewContext
+        _ = controller.ensureUserSettings(in: context)
+
+        let profile = GlowProfile(context: context)
+        profile.faceShape = "Oval"
+        profile.colorPalette = "Warm"
+        profile.bestAngleTilt = 12
+        profile.optimalLightingDesc = "Soft daylight near a window"
+        profile.theme = "Glow Revival"
+
+        let tip = TipEntry(context: context)
+        tip.id = UUID().uuidString
+        tip.type = "short"
+        tip.title = "Face the light"
+        tip.body = "Take a half-step toward your light source and drop your shoulder."
+        tip.completed = false
+        tip.createdAt = Date()
+        tip.source = "preview"
+
         do {
-            try viewContext.save()
+            try context.save()
         } catch {
-            // Replace this implementation with code to handle the error appropriately.
-            // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-            let nsError = error as NSError
-            fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+            assertionFailure("Preview store failed: \(error)")
         }
-        return result
+        return controller
     }()
 
     let container: NSPersistentContainer
 
+    var viewContext: NSManagedObjectContext { container.viewContext }
+
     init(inMemory: Bool = false) {
         container = NSPersistentContainer(name: "glowup")
         if inMemory {
-            container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
+            container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
         }
-        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
+        container.loadPersistentStores { _, error in
             if let error = error as NSError? {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-
-                /*
-                 Typical reasons for an error here include:
-                 * The parent directory does not exist, cannot be created, or disallows writing.
-                 * The persistent store is not accessible, due to permissions or data protection when the device is locked.
-                 * The device is out of space.
-                 * The store could not be migrated to the current model version.
-                 Check the error message to determine what the actual problem was.
-                 */
                 fatalError("Unresolved error \(error), \(error.userInfo)")
             }
-        })
+        }
         container.viewContext.automaticallyMergesChangesFromParent = true
+        container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+    }
+
+    func newBackgroundContext() -> NSManagedObjectContext {
+        let context = container.newBackgroundContext()
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        context.automaticallyMergesChangesFromParent = true
+        return context
+    }
+
+    @discardableResult
+    @MainActor
+    func ensureUserSettings(in context: NSManagedObjectContext? = nil) -> UserSettings {
+        let context = context ?? viewContext
+        let request = NSFetchRequest<UserSettings>(entityName: "UserSettings")
+        request.fetchLimit = 1
+        if let existing = try? context.fetch(request).first {
+            return existing
+        }
+
+        let settings = UserSettings(context: context)
+        settings.coachPersonaID = CoachPersona.bestie.rawValue
+        settings.isProSubscriber = false
+        settings.onboardingComplete = false
+        settings.lastSessionDate = nil
+
+        do {
+            try context.save()
+        } catch {
+            assertionFailure("Failed to seed UserSettings: \(error)")
+        }
+        return settings
+    }
+
+    @MainActor
+    func saveIfNeeded(_ context: NSManagedObjectContext? = nil) {
+        let context = context ?? viewContext
+        guard context.hasChanges else { return }
+        do {
+            try context.save()
+        } catch {
+            assertionFailure("Failed to save context: \(error)")
+        }
     }
 }

@@ -399,6 +399,11 @@
 				DEVELOPMENT_TEAM = BZ8A567N3B;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = BetterSide;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_NSCameraUsageDescription = "GlowUp uses the camera to capture photos for personalized analysis.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "GlowUp exports edited photos to your library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "GlowUp needs access to your photo library to select images for analysis.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -428,6 +433,11 @@
 				DEVELOPMENT_TEAM = BZ8A567N3B;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = BetterSide;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_NSCameraUsageDescription = "GlowUp uses the camera to capture photos for personalized analysis.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "GlowUp exports edited photos to your library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "GlowUp needs access to your photo library to select images for analysis.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

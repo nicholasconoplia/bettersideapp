@@ -8,13 +8,27 @@
 import SwiftUI
 
 @main
-struct glowupApp: App {
-    let persistenceController = PersistenceController.shared
+struct GlowUpApp: App {
+    private let persistenceController = PersistenceController.shared
+    @StateObject private var appModel: AppModel
+
+    init() {
+        let persistence = PersistenceController.shared
+        let subscriptionManager = SubscriptionManager()
+        _appModel = StateObject(
+            wrappedValue: AppModel(
+                persistenceController: persistence,
+                subscriptionManager: subscriptionManager
+            )
+        )
+    }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environmentObject(appModel)
+                .environmentObject(appModel.subscriptionManager)
         }
     }
 }
