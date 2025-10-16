@@ -114,7 +114,7 @@ enum PaywallPreviewBuilder {
     private static func solutionBullets(from result: QuizResult?) -> [String] {
         guard let result else {
             return [
-                "GlowUp maps your routines, palettes, and poses so you always know what works.",
+                "BetterSide maps your routines, palettes, and poses so you always know what works.",
                 "Live coaching and daily rituals keep you accountable when motivation dips."
             ]
         }
@@ -167,7 +167,7 @@ enum PaywallPreviewBuilder {
         }
 
         if bullets.isEmpty {
-            bullets.append("GlowUp maps your routines, palettes, and poses so you always know what works.")
+            bullets.append("BetterSide maps your routines, palettes, and poses so you always know what works.")
             bullets.append("Live coaching and daily rituals keep you accountable when motivation dips.")
         }
         return bullets

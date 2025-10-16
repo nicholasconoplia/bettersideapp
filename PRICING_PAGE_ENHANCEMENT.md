@@ -26,7 +26,7 @@ The original pricing comparison was good, but needed to be MORE persuasive for t
   - "$20 on impulse Amazon buys that show up and confuse you"
   - "$18 on the iced latte + pastry combo before brunch"
 
-**Psychology:** Shows the user is ALREADY spending $155+/month on forgettable things. GlowUp at $2.50/month is a no-brainer.
+**Psychology:** Shows the user is ALREADY spending $155+/month on forgettable things. BetterSide at $2.50/month is a no-brainer.
 
 **Monthly Plan ($4.99/month)**
 

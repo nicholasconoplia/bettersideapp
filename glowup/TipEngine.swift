@@ -46,7 +46,7 @@ final class TipEngine {
                     id: action.id,
                     title: action.title,
                     body: action.body,
-                    source: "GlowUp Coach",
+                    source: "BetterSide Coach",
                     type: mode.storageType
                 )
             }

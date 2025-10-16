@@ -32,7 +32,7 @@ private struct SplashLoadingView: View {
         ZStack {
             GradientBackground.lavenderRose
             VStack(spacing: 20) {
-                Text("GlowUp")
+                Text("BetterSide")
                     .font(.largeTitle.bold())
                     .foregroundStyle(.white)
                 ProgressView()

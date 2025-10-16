@@ -44,6 +44,7 @@ struct SubscriptionGateView: View {
                     }
                     primaryButton
                     restoreButton
+                    legalLinks
                     declineButton
                 }
                 .padding(.top, 72)
@@ -107,7 +108,7 @@ struct SubscriptionGateView: View {
 
             if !preview.solutionBullets.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("GlowUp will")
+                    Text("BetterSide will")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.75))
                     ForEach(preview.solutionBullets, id: \.self) { line in
@@ -191,7 +192,7 @@ struct SubscriptionGateView: View {
     }
 
     private var valueComparison: some View {
-        let copy = priceComparison(for: selectedPlan)
+        let copy = selectedPlan.comparisonCopy()
         return VStack(alignment: .leading, spacing: 16) {
             Text(copy.headline)
                 .font(.body.weight(.bold))
@@ -220,14 +221,14 @@ struct SubscriptionGateView: View {
                     .padding(.vertical, 4)
                 
                 comparisonColumn(
-                    title: "GlowUp gives you",
+                    title: "BetterSide gives you",
                     icon: "star.fill",
                     lines: copy.glowupBenefits,
                     accentColor: Color(red: 0.94, green: 0.34, blue: 0.56)
                 )
             }
             
-            Text("Real talk: You'll spend way more on coffee this month than a year of GlowUp. But coffee lasts 20 minutes. This? This lasts forever. 💅")
+            Text("Real talk: You'll spend way more on coffee this month than a year of BetterSide. But coffee lasts 20 minutes. This? This lasts forever. 💅")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.9))
                 .italic()
@@ -283,73 +284,6 @@ struct SubscriptionGateView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func priceComparison(for plan: PaywallPlan) -> PriceComparison {
-        switch plan.id {
-        case "annual":
-            return PriceComparison(
-                headline: "Less than ONE iced matcha per month 🌿✨",
-                subtitle: "You're already spending way more on things you'll forget tomorrow. GlowUp is \(plan.pricePerMonth)/month ($29.99 today) and pays you back every single day.",
-                everydayTitle: "What you're already spending every month",
-                everydaySpending: [
-                    "$72 on matcha/coffee runs (3x/week habit you don't think about)",
-                    "$45 on that \"quick\" Sephora trip for products you use once",
-                    "$20 on impulse Amazon buys that show up and confuse you",
-                    "$18 on the iced latte + pastry combo before brunch"
-                ],
-                glowupBenefits: [
-                    "AI photo analysis in seconds—know EXACTLY what works on you",
-                    "Your personal color palette so you stop buying things that wash you out",
-                    "Posing, angles & lighting tips that make every pic glow-worthy",
-                    "Confidence that compounds—you look better AND feel it"
-                ]
-            )
-        case "monthly":
-            return PriceComparison(
-                headline: "Literally the price of ONE iced coffee ☕️",
-                subtitle: "Think about how many lattes you grab per week without blinking. GlowUp is \(plan.pricePerMonth) total for the ENTIRE month. One coffee = 30 days of glow insights.",
-                everydayTitle: "Things you buy without thinking twice",
-                everydaySpending: [
-                    "$6.50 iced latte at the cute cafe (you get like 3-4/week)",
-                    "$8 açai bowl for the 'gram (eaten in 5 minutes, forgotten in 6)",
-                    "$12 trending lip combo from TikTok (sits in your drawer)",
-                    "$15 \"treat yourself\" Target haul of things you didn't need"
-                ],
-                glowupBenefits: [
-                    "Instant photo breakdowns whenever you need them—dates, interviews, content",
-                    "Know your exact seasonal colors so makeup and clothes actually work",
-                    "Soft-max glow tips that cost $0 but boost your confidence 24/7",
-                    "Stop guessing what looks good—the AI tells you based on YOUR face"
-                ]
-            )
-        default:
-            return PriceComparison(
-                headline: "Your daily coffee habit costs more than this 💸",
-                subtitle: "One month of GlowUp = less than your weekly coffee runs. But unlike coffee, this investment keeps paying off.",
-                everydayTitle: "Money you spend on autopilot",
-                everydaySpending: [
-                    "$25-30/week on coffee & drinks you barely taste",
-                    "$40-50/month on beauty products from viral TikToks",
-                    "$15-20/month on subscriptions you forgot you have",
-                    "$30+ on \"I'll definitely use this\" impulse buys"
-                ],
-                glowupBenefits: [
-                    "AI coaching that adapts to YOU—not generic tips from the internet",
-                    "Confidence in every photo, date, interview, and mirror check",
-                    "Color theory, face shape analysis, and posing guides—all personalized",
-                    "Knowledge that stays with you forever vs. products you'll replace monthly"
-                ]
-            )
-        }
-    }
-
-    private struct PriceComparison {
-        let headline: String
-        let subtitle: String
-        let everydayTitle: String
-        let everydaySpending: [String]
-        let glowupBenefits: [String]
-    }
-
     private var primaryButton: some View {
         Button {
             guard !isLoading else { return }
@@ -364,7 +298,7 @@ struct SubscriptionGateView: View {
                 isLoading = false
             }
         } label: {
-            let buttonTitle = (selectedPlan.supportsTrial && includeTrial) ? primaryButtonTitle : "Unlock GlowUp Today"
+            let buttonTitle = (selectedPlan.supportsTrial && includeTrial) ? primaryButtonTitle : "Unlock BetterSide Today"
             HStack(spacing: 12) {
                 if isLoading {
                     ProgressView()
@@ -372,8 +306,13 @@ struct SubscriptionGateView: View {
                         .tint(.white)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(buttonTitle)
-                        .font(.headline)
+                    HStack(spacing: 8) {
+                        Text(buttonTitle)
+                            .font(.headline.weight(.bold))
+                        Text(selectedPlan.primaryBillingAmount)
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(.white.opacity(0.9))
+                    }
                     Text(selectedPlan.ctaSubtitle(includeTrial: includeTrial))
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.8))
@@ -425,6 +364,45 @@ struct SubscriptionGateView: View {
         .padding(.horizontal, 20)
     }
 
+    private var legalLinks: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 16) {
+                Button {
+                    if let url = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/") {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text("Terms of Use")
+                        .font(.caption.weight(.medium))
+                        .underline()
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+                
+                Text("•")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.5))
+                
+                Button {
+                    if let url = URL(string: "https://betterside.vercel.app/privacy.html") {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text("Privacy Policy")
+                        .font(.caption.weight(.medium))
+                        .underline()
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+            }
+            
+            Text("By subscribing, you agree to our Terms of Use and Privacy Policy")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.6))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .padding(.horizontal, 20)
+    }
+    
     private var declineButton: some View {
         Button {
             onDecline?()
@@ -459,13 +437,19 @@ private struct PaywallPlanCard: View {
             }
             .foregroundStyle(isSelected ? .white : .white.opacity(0.9))
 
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(plan.pricePerMonth)
-                    .font(.title2.bold())
-                Text("per month")
-                    .font(.footnote.weight(.medium))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(plan.primaryBillingAmount)
+                    .font(.title.bold())
+                    .foregroundStyle(isSelected ? .white : .white.opacity(0.95))
+                
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(plan.pricePerMonth)
+                        .font(.subheadline.weight(.medium))
+                    Text("per month")
+                        .font(.caption.weight(.regular))
+                }
+                .foregroundStyle(isSelected ? .white.opacity(0.8) : .white.opacity(0.7))
             }
-            .foregroundStyle(isSelected ? .white : .white.opacity(0.85))
 
             if let original = plan.originalPrice {
                 HStack(spacing: 6) {
@@ -496,10 +480,11 @@ private struct PaywallPlanCard: View {
     }
 }
 
-private struct PaywallPlan: Identifiable, Equatable {
+struct PaywallPlan: Identifiable, Equatable {
     let id: String
     let title: String
     let pricePerMonth: String
+    let primaryBillingAmount: String
     let billingDescription: String
     let originalPrice: String?
     let savingsCopy: String
@@ -511,6 +496,7 @@ private struct PaywallPlan: Identifiable, Equatable {
         id: "annual",
         title: "Annual Glow Plan",
         pricePerMonth: "$2.50",
+        primaryBillingAmount: "$29.99",
         billingDescription: "Billed $29.99 today.",
         originalPrice: "$149.99",
         savingsCopy: "Save big vs. monthly",
@@ -523,6 +509,7 @@ private struct PaywallPlan: Identifiable, Equatable {
         id: "monthly",
         title: "Monthly Glow Plan",
         pricePerMonth: "$4.99",
+        primaryBillingAmount: "$4.99",
         billingDescription: "Billed $4.99 every month.",
         originalPrice: nil,
         savingsCopy: "",
@@ -533,7 +520,7 @@ private struct PaywallPlan: Identifiable, Equatable {
 
     static let all: [PaywallPlan] = [.annual, .monthly]
 }
-private extension PaywallPlan {
+extension PaywallPlan {
     func ctaSubtitle(includeTrial: Bool) -> String {
         if supportsTrial && includeTrial {
             return "Trial ends before billing—reminders inside the app."
@@ -545,6 +532,235 @@ private extension PaywallPlan {
             return "Charged $4.99 today—renews monthly."
         default:
             return "Secure checkout handled by Apple."
+        }
+    }
+
+    func comparisonCopy() -> PriceComparison {
+        switch id {
+        case "annual":
+            return PriceComparison(
+                headline: "Less than ONE iced matcha per month 🌿✨",
+                subtitle: "You're already spending way more on things you'll forget tomorrow. BetterSide is \(pricePerMonth)/month (\(primaryBillingAmount) today) and pays you back every single day.",
+                everydayTitle: "What you're already spending every month",
+                everydaySpending: [
+                    "$72 on matcha/coffee runs (3x/week habit you don't think about)",
+                    "$45 on that \"quick\" Sephora trip for products you use once",
+                    "$20 on impulse Amazon buys that show up and confuse you",
+                    "$18 on the iced latte + pastry combo before brunch"
+                ],
+                glowupBenefits: [
+                    "AI photo analysis in seconds—know EXACTLY what works on you",
+                    "Your personal color palette so you stop buying things that wash you out",
+                    "Posing, angles & lighting tips that make every pic glow-worthy",
+                    "Confidence that compounds—you look better AND feel it"
+                ]
+            )
+        case "monthly":
+            return PriceComparison(
+                headline: "Literally the price of ONE iced coffee ☕️",
+                subtitle: "Think about how many lattes you grab per week without blinking. BetterSide is \(pricePerMonth) total for the ENTIRE month. One coffee = 30 days of glow insights.",
+                everydayTitle: "Things you buy without thinking twice",
+                everydaySpending: [
+                    "$6.50 iced latte at the cute cafe (you get like 3-4/week)",
+                    "$8 açai bowl for the 'gram (eaten in 5 minutes, forgotten in 6)",
+                    "$12 trending lip combo from TikTok (sits in your drawer)",
+                    "$15 \"treat yourself\" Target haul of things you didn't need"
+                ],
+                glowupBenefits: [
+                    "Instant photo breakdowns whenever you need them—dates, interviews, content",
+                    "Know your exact seasonal colors so makeup and clothes actually work",
+                    "Soft-max glow tips that cost $0 but boost your confidence 24/7",
+                    "Stop guessing what looks good—the AI tells you based on YOUR face"
+                ]
+            )
+        default:
+            return PriceComparison(
+                headline: "Your daily coffee habit costs more than this 💸",
+                subtitle: "One month of BetterSide = less than your weekly coffee runs. But unlike coffee, this investment keeps paying off.",
+                everydayTitle: "Money you spend on autopilot",
+                everydaySpending: [
+                    "$25-30/week on coffee & drinks you barely taste",
+                    "$40-50/month on beauty products from viral TikToks",
+                    "$15-20/month on subscriptions you forgot you have",
+                    "$30+ on \"I'll definitely use this\" impulse buys"
+                ],
+                glowupBenefits: [
+                    "AI coaching that adapts to YOU—not generic tips from the internet",
+                    "Confidence in every photo, date, interview, and mirror check",
+                    "Color theory, face shape analysis, and posing guides—all personalized",
+                    "Knowledge that stays with you forever vs. products you'll replace monthly"
+                ]
+            )
+        }
+    }
+}
+
+struct PriceComparison {
+    let headline: String
+    let subtitle: String
+    let everydayTitle: String
+    let everydaySpending: [String]
+    let glowupBenefits: [String]
+}
+
+struct SubscriptionReconsiderationView: View {
+    let onReturnToPlans: () -> Void
+    let onExitToStart: () -> Void
+
+    private let plans = PaywallPlan.all
+
+    var body: some View {
+        ZStack {
+            GradientBackground.twilightAura
+                .ignoresSafeArea()
+            ScrollView {
+                VStack(spacing: 28) {
+                    header
+                    ForEach(plans) { plan in
+                        comparisonSection(for: plan)
+                    }
+                    actionButtons
+                }
+                .padding(.vertical, 48)
+                .padding(.horizontal, 24)
+            }
+        }
+    }
+
+    private var header: some View {
+        VStack(spacing: 12) {
+            Text("Glow first, sip coffee second ☕️✨")
+                .font(.title.bold())
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white)
+            Text("Take 30 seconds to see how BetterSide stacks up against the little splurges that disappear by tomorrow.")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.8))
+        }
+    }
+
+    private func comparisonSection(for plan: PaywallPlan) -> some View {
+        let copy = plan.comparisonCopy()
+        return VStack(alignment: .leading, spacing: 20) {
+            Text(plan.title.uppercased())
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white.opacity(0.75))
+            Text(copy.headline)
+                .font(.title3.bold())
+                .foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(copy.subtitle)
+                .font(.footnote)
+                .foregroundStyle(.white.opacity(0.85))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+                .background(Color.white.opacity(0.2))
+
+            VStack(alignment: .leading, spacing: 16) {
+                comparisonColumn(
+                    title: copy.everydayTitle,
+                    icon: "creditcard.fill",
+                    lines: copy.everydaySpending,
+                    accentColor: Color(red: 1.0, green: 0.6, blue: 0.4)
+                )
+                comparisonColumn(
+                    title: "BetterSide gives you",
+                    icon: "star.fill",
+                    lines: copy.glowupBenefits,
+                    accentColor: Color(red: 0.94, green: 0.34, blue: 0.56)
+                )
+            }
+
+            if plan.supportsTrial {
+                Text("7-day free trial, then \(plan.primaryBillingAmount)/year. Cancel anytime before it renews.")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.85))
+            } else {
+                Text("\(plan.primaryBillingAmount) billed monthly. Cancel anytime before the next renewal.")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color.white.opacity(0.14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(Color.white.opacity(0.18))
+                )
+        )
+    }
+
+    private func comparisonColumn(title: String, icon: String, lines: [String], accentColor: Color) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(accentColor)
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .textCase(.uppercase)
+            }
+            ForEach(lines, id: \.self) { line in
+                HStack(alignment: .top, spacing: 8) {
+                    Circle()
+                        .fill(accentColor.opacity(0.85))
+                        .frame(width: 5, height: 5)
+                        .padding(.top, 5)
+                    Text(line)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private var actionButtons: some View {
+        VStack(spacing: 16) {
+            Button {
+                onReturnToPlans()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.uturn.left.circle.fill")
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Okay, show me the plans again")
+                            .font(.headline)
+                        Text("I'm ready to compare options one more time.")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                    Spacer()
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color(red: 0.94, green: 0.34, blue: 0.56))
+                        .shadow(color: Color.black.opacity(0.25), radius: 16, y: 12)
+                )
+                .foregroundStyle(.white)
+            }
+
+            Button {
+                onExitToStart()
+            } label: {
+                Text("No, I'm sure I don't want to glow up")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.75))
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.white.opacity(0.35))
+                    )
+            }
+            .padding(.top, 4)
         }
     }
 }

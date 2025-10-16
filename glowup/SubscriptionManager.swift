@@ -28,7 +28,7 @@ enum SubscriptionError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .productUnavailable:
-            return "The GlowUp subscription is currently unavailable."
+            return "The BetterSide subscription is currently unavailable."
         case .failedVerification:
             return "We could not verify the purchase. Please try again."
         }

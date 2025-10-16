@@ -22,6 +22,7 @@ struct OnboardingFlowView: View {
         case consequence(Int)
         case celebration
         case subscription
+        case reconsideration
     }
 
     @State private var step: Step = .intro
@@ -127,7 +128,25 @@ struct OnboardingFlowView: View {
                     await subscriptionManager.refreshEntitlementState()
                 },
                 onBack: nil,
-                onDecline: nil
+                onDecline: {
+                    withAnimation(.easeInOut) {
+                        step = .reconsideration
+                    }
+                }
+            )
+        case .reconsideration:
+            SubscriptionReconsiderationView(
+                onReturnToPlans: {
+                    withAnimation(.easeInOut) {
+                        step = .subscription
+                    }
+                },
+                onExitToStart: {
+                    restartFlow()
+                    withAnimation(.easeInOut) {
+                        step = .intro
+                    }
+                }
             )
         }
     }
@@ -163,12 +182,18 @@ struct OnboardingFlowView: View {
     }
 
     private func completeIdentity() {
-        guard !nameInput.trimmingCharacters(in: .whitespaces).isEmpty,
-              let ageValue = Int(ageInput), ageValue > 0 else { return }
+        guard !nameInput.trimmingCharacters(in: .whitespaces).isEmpty else { return }
 
         var result = quizResult ?? quizViewModel.buildResult()
         result.userName = nameInput.trimmingCharacters(in: .whitespaces)
-        result.age = ageValue
+        
+        // Age is optional - only set if provided and valid
+        if let ageValue = Int(ageInput), ageValue > 0 {
+            result.age = ageValue
+        } else {
+            result.age = nil
+        }
+        
         quizResult = result
         appModel.saveQuizResult(result)
 
@@ -196,6 +221,19 @@ struct OnboardingFlowView: View {
         RunLoop.main.add(loadingTimer!, forMode: .common)
     }
 
+    private func restartFlow() {
+        loadingTimer?.invalidate()
+        loadingTimer = nil
+        loadingProgress = 0
+        quizViewModel.resetSelections()
+        quizResult = nil
+        analysisPreview = nil
+        nameInput = ""
+        ageInput = ""
+        selectedLanguage = SupportedLanguage.default
+        appModel.resetOnboarding()
+    }
+
 }
 
 // MARK: - Intro & Warmup
@@ -206,12 +244,9 @@ private struct IntroStepView: View {
     var body: some View {
         VStack(spacing: 36) {
             VStack(spacing: 12) {
-                Text("GlowUp")
+                Text("Welcome to BetterSide")
                     .font(.largeTitle.weight(.bold))
                     .foregroundStyle(.white.opacity(0.95))
-                Text("Welcome ✨")
-                    .font(.title.bold())
-                    .foregroundStyle(.white)
                 Text("Let’s start by learning how you feel about your glow right now.")
                     .font(.subheadline.weight(.medium))
                     .multilineTextAlignment(.center)
@@ -243,7 +278,7 @@ private struct WarmupStepView: View {
         VStack(spacing: 32) {
             Spacer()
             VStack(spacing: 16) {
-                Text("Let’s go — welcome to GlowUp.")
+                Text("BetterSide will help you look and feel like your best self.")
                     .font(.title.bold())
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white)
@@ -366,9 +401,8 @@ private struct QuestionStepView: View {
             .padding(.bottom, 32)
         }
     }
-}
 
-// MARK: - Identity Capture
+}
 
 private struct IdentityCaptureView: View {
     @Binding var name: String
@@ -396,7 +430,7 @@ private struct IdentityCaptureView: View {
                     )
                     .foregroundStyle(.white)
 
-                TextField("Age", text: $age)
+                TextField("Age (optional)", text: $age)
                     .keyboardType(.numberPad)
                     .padding()
                     .background(
@@ -428,9 +462,10 @@ private struct IdentityCaptureView: View {
 
     private var canSubmit: Bool {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty, let ageValue = Int(age), ageValue > 0 else {
+        guard !trimmed.isEmpty else {
             return false
         }
+        // Age is optional, so we don't validate it
         return true
     }
 }
@@ -504,7 +539,7 @@ private struct AnalysisSummaryView: View {
 
                         if !preview.solutionBullets.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("How GlowUp will solve it")
+                                Text("How BetterSide will solve it")
                                     .font(.callout.weight(.semibold))
                                     .foregroundStyle(.white.opacity(0.8))
                                 ForEach(preview.solutionBullets, id: \.self) { line in
@@ -622,7 +657,7 @@ private struct FinalWelcomeView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 28) {
-                Text("Welcome to GlowUp")
+                Text("Welcome to BetterSide")
                     .font(.largeTitle.bold())
                     .foregroundStyle(.white)
                     .padding(.top, 48)
@@ -697,19 +732,19 @@ private struct OnboardingSlide: Identifiable {
         OnboardingSlide(
             id: "slide1",
             emoji: "😔",
-            title: "Without GlowUp",
+            title: "Without BetterSide",
             message: "Posting a selfie and cringing at how different you look from the mirror. Wondering why your angles feel off no matter how hard you try, %@."
         ),
         OnboardingSlide(
             id: "slide2",
             emoji: "🤔",
-            title: "Without GlowUp",
+            title: "Without BetterSide",
             message: "Spending $$$ on skincare, makeup, and new outfits—but still feeling like something's missing. Like you're guessing instead of knowing what works, %@."
         ),
         OnboardingSlide(
             id: "slide3",
             emoji: "😰",
-            title: "Without GlowUp",
+            title: "Without BetterSide",
             message: "Getting ready for an event and feeling that familiar panic: 'Do I actually look good or am I lying to myself?' The uncertainty ruins the vibe before you even leave, %@."
         )
     ]
@@ -738,6 +773,8 @@ private struct ReviewQuote: Identifiable {
         )
     ]
 }
+
+// MARK: - Missing View Components
 
 // MARK: - PlanSelectionSheet Removed
 
