@@ -27,10 +27,11 @@ struct PresetCard: View {
                             .background(Color.white.opacity(0.12))
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     } else {
-                        Text(category.systemImageName == "sparkles" ? "✨" : "💡")
-                            .font(.title3)
-                            .padding(8)
-                            .background(Color.white.opacity(0.1))
+                        Image(systemName: category.systemImageName)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(10)
+                            .background(Color.white.opacity(0.12))
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
 

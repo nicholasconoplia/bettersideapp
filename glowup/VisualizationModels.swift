@@ -99,6 +99,8 @@ struct VisualizationPresetOption: Identifiable, Hashable, Codable {
     let iconName: String?
     let swatchHex: String?
     let isPremium: Bool
+    let isRecommended: Bool
+    let noteDetail: String?
 
     init(
         id: UUID = UUID(),
@@ -107,7 +109,9 @@ struct VisualizationPresetOption: Identifiable, Hashable, Codable {
         prompt: String,
         iconName: String? = nil,
         swatchHex: String? = nil,
-        isPremium: Bool = false
+        isPremium: Bool = false,
+        isRecommended: Bool = false,
+        noteDetail: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -116,6 +120,22 @@ struct VisualizationPresetOption: Identifiable, Hashable, Codable {
         self.iconName = iconName
         self.swatchHex = swatchHex
         self.isPremium = isPremium
+        self.isRecommended = isRecommended
+        self.noteDetail = noteDetail
+    }
+
+    func withRecommended(_ flag: Bool) -> VisualizationPresetOption {
+        VisualizationPresetOption(
+            id: id,
+            title: title,
+            subtitle: subtitle,
+            prompt: prompt,
+            iconName: iconName,
+            swatchHex: swatchHex,
+            isPremium: isPremium,
+            isRecommended: flag,
+            noteDetail: noteDetail
+        )
     }
 }
 

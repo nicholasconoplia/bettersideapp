@@ -18,125 +18,210 @@ enum VisualizationNoteComposer {
         category: VisualizationLookCategory,
         prompt: String?,
         analysis: PhotoAnalysisVariables?,
-        presetCategory: VisualizationPresetCategory?
+        presetCategory: VisualizationPresetCategory?,
+        presetOption: VisualizationPresetOption?,
+        lookDescription: LookDescription?
     ) -> VisualizationNoteContent {
-        let professional = category.professionalTitle.capitalized
-        let summary = "Bring this look to your \(professional.lowercased())"
-
-        var sections: [String] = []
-        if let prompt, !prompt.isEmpty {
-            sections.append("Inspiration cue: \(prompt.trimmingCharacters(in: .whitespacesAndNewlines)).")
+        let professional = category.professionalTitle.lowercased()
+        let focusTitle: String? = {
+            if let look = lookDescription {
+                let title = look.styleName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !title.isEmpty { return title }
+            }
+            if let option = presetOption {
+                let title = option.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !title.isEmpty { return title }
+            }
+            return nil
+        }()
+        let summary: String
+        if let focusTitle {
+            summary = "\(focusTitle) for your \(professional)"
+        } else {
+            summary = "Bring this look to your \(professional)"
         }
 
-        if let analysis {
-            sections.append(contentsOf: analysisHighlights(for: category, analysis: analysis))
+        let detailLines = makeDetailLines(
+            category: category,
+            prompt: prompt,
+            analysis: analysis,
+            presetOption: presetOption,
+            lookDescription: lookDescription
+        )
+        let formattedDetail: String
+        if detailLines.isEmpty {
+            formattedDetail = "Capture this AI-rendered look from multiple angles and show it to your \(professional)."
+        } else {
+            formattedDetail = detailLines
+                .map { "• \($0.ensureSentence())" }
+                .joined(separator: "\n")
         }
 
-        if sections.isEmpty {
-            sections.append("Capture reference photos of this AI look and show them to your \(professional.lowercased()).")
-        }
-
-        let detail = sections.joined(separator: " ")
         let keywords = buildKeywords(
             category: category,
             analysis: analysis,
             presetCategory: presetCategory,
-            prompt: prompt
+            prompt: prompt,
+            presetOption: presetOption,
+            lookDescription: lookDescription
         )
 
-        return VisualizationNoteContent(summary: summary, detail: detail, keywords: keywords)
+        return VisualizationNoteContent(summary: summary, detail: formattedDetail, keywords: keywords)
     }
 
-    private static func analysisHighlights(
-        for category: VisualizationLookCategory,
-        analysis: PhotoAnalysisVariables
+    private static func makeDetailLines(
+        category: VisualizationLookCategory,
+        prompt: String?,
+        analysis: PhotoAnalysisVariables?,
+        presetOption: VisualizationPresetOption?,
+        lookDescription: LookDescription?
     ) -> [String] {
+        var lines: [String] = []
+
+        if let look = lookDescription {
+            let request = look.whatToRequest.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !request.isEmpty {
+                lines.append(request)
+            }
+            lines.append(contentsOf: look.combinedNotes)
+        } else if let option = presetOption {
+            let baseInstruction = option.noteDetail?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let instruction = baseInstruction, !instruction.isEmpty {
+                lines.append("\(option.title): \(instruction)")
+            } else {
+                lines.append("Ask for \(option.title) by name.")
+            }
+        }
+
         switch category {
         case .hair:
-            var hints: [String] = []
-            if let shape = analysis.faceShape {
-                hints.append("Design the cut around a \(shape.lowercased()) face shape.")
+            if let shape = analysis?.faceShape {
+                lines.append("Tailor the finish to flatter a \(shape.lowercased()) face shape.")
             }
-            if let palette = analysis.seasonalPalette {
-                hints.append("Keep color placement harmonious with a \(palette.lowercased()) seasonal palette.")
+            if let color = analysis?.hairColor {
+                lines.append("Blend the style with your current \(color.lowercased()) so the grow-out stays seamless.")
             }
-            if let hairColor = analysis.hairColor {
-                hints.append("Current hair color: \(hairColor). Blend transitions smoothly.")
+            if let palette = analysis?.seasonalPalette {
+                lines.append("Keep tone and shine aligned with the \(palette.lowercased()) palette.")
             }
-            return hints
         case .makeup:
-            var hints: [String] = []
-            hints.append("Preferred makeup vibe: \(analysis.makeupStyle).")
-            if let eye = analysis.eyeColor {
-                hints.append("Play up \(eye.lowercased()) eyes with complementary tones.")
+            if let style = analysis?.makeupStyle, !style.isEmpty {
+                lines.append("Overall vibe: \(style). Build the look with that finish in mind.")
             }
-            if let undertone = analysis.skinUndertone {
-                hints.append("Skin undertone leans \(undertone.lowercased()); match base products accordingly.")
+            if let eye = analysis?.eyeColor {
+                lines.append("Accent \(eye.lowercased()) eyes with tones that mirror this render.")
             }
-            return hints
+            if let undertone = analysis?.skinUndertone {
+                lines.append("Match base products to your \(undertone.lowercased()) undertone.")
+            }
         case .outfit:
-            var hints: [String] = []
-            if let palette = analysis.seasonalPalette {
-                hints.append("Stick to a \(palette.lowercased()) seasonal palette for fabrics.")
+            if let palette = analysis?.seasonalPalette {
+                lines.append("Stay within the \(palette.lowercased()) seasonal palette for fabrics and accessories.")
             }
-            if !analysis.bestColors.isEmpty {
-                let favorites = analysis.bestColors.prefix(3).joined(separator: ", ")
-                hints.append("Hero colors: \(favorites).")
+            if let colors = analysis?.bestColors, !colors.isEmpty {
+                lines.append("Hero colors from your analysis: \(colors.prefix(3).joined(separator: ", ")).")
             }
-            hints.append("Outfit vibe score: \(String(format: "%.1f", analysis.outfitColorMatch))/10 for color coordination.")
-            return hints
         case .other:
-            return [
-                "Lean into poses and expression that scored \(String(format: "%.1f", analysis.poseNaturalness))/10 on naturalness.",
-                "Overall glow score: \(String(format: "%.1f", analysis.overallGlowScore))/10."
-            ]
+            if let analysis {
+                lines.append("Pose naturally—your pose score is \(String(format: "%.1f", analysis.poseNaturalness))/10.")
+                lines.append("Overall glow score: \(String(format: "%.1f", analysis.overallGlowScore))/10.")
+            }
         }
+
+        if let prompt, !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, presetOption == nil, lookDescription == nil {
+            lines.append("Inspiration cue: \(prompt.trimmingCharacters(in: .whitespacesAndNewlines)).")
+        }
+
+        return lines
     }
 
     private static func buildKeywords(
         category: VisualizationLookCategory,
         analysis: PhotoAnalysisVariables?,
         presetCategory: VisualizationPresetCategory?,
-        prompt: String?
+        prompt: String?,
+        presetOption: VisualizationPresetOption?,
+        lookDescription: LookDescription?
     ) -> [String] {
-        var keywords: Set<String> = []
+        var list: [String] = []
+        var seen: Set<String> = []
 
-        if let prompt {
-            keywords.formUnion(prompt
-                .lowercased()
-                .split(whereSeparator: { !$0.isLetter && !$0.isNumber && $0 != "-" })
-                .map { String($0) }
-                .filter { $0.count > 2 })
+        func append(_ keyword: String) {
+            let trimmed = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return }
+            let normalized = trimmed.lowercased()
+            if seen.insert(normalized).inserted {
+                list.append(trimmed.capitalized)
+            }
+        }
+
+        if let option = presetOption {
+            append(option.title)
+            switch category {
+            case .hair:
+                append("\(option.title) hairstyle")
+            case .makeup:
+                append("\(option.title) makeup")
+            case .outfit:
+                append("\(option.title) outfit")
+            case .other:
+                break
+            }
+        }
+
+        if let look = lookDescription {
+            append(look.styleName)
+            look.pinterestKeywords.forEach { append($0) }
         }
 
         if let analysis {
             if let palette = analysis.seasonalPalette {
-                keywords.insert("\(palette.lowercased()) palette")
+                append("\(palette) palette")
             }
-            keywords.formUnion(
-                analysis.bestColors
-                    .map { "\($0.lowercased()) outfit" }
-            )
+            if category == .outfit || category == .hair {
+                analysis.bestColors.forEach { append("\($0) color story") }
+            }
+            if category == .hair, let hairColor = analysis.hairColor {
+                append("\(hairColor) hair")
+            }
+        }
+
+        if let presetCategory {
+            append(presetCategory.displayName)
+        }
+
+        if let prompt {
+            prompt
+                .lowercased()
+                .split(whereSeparator: { !$0.isLetter && !$0.isNumber && $0 != "-" })
+                .map { String($0) }
+                .filter { $0.count > 3 }
+                .forEach { append($0) }
         }
 
         switch category {
         case .hair:
-            keywords.insert("hair transformation")
-            keywords.insert("salon inspiration")
+            append("Hair inspiration")
+            append("Salon reference")
         case .makeup:
-            keywords.insert("makeup tutorial")
-            keywords.insert("face chart")
+            append("Makeup tutorial")
         case .outfit:
-            keywords.insert("wardrobe styling")
-            keywords.insert("lookbook")
+            append("Wardrobe styling")
         case .other:
-            keywords.insert("beauty inspo")
+            append("Beauty inspo")
         }
 
-        if let presetCategory {
-            keywords.insert(presetCategory.displayName.lowercased())
-        }
+        return Array(list.prefix(8))
+    }
+}
 
-        return Array(keywords.prefix(8))
+private extension String {
+    func ensureSentence() -> String {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return trimmed }
+        if let last = trimmed.last, ".!?".contains(last) {
+            return trimmed
+        }
+        return "\(trimmed)."
     }
 }

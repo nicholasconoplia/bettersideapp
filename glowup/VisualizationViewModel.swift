@@ -20,6 +20,7 @@ final class VisualizationViewModel: ObservableObject {
     @Published private(set) var savedNotes: [VisualizationNote] = []
     @Published var lastSavedNote: VisualizationNote?
     @Published var isProcessing = false
+    @Published var activityMessage: String?
     @Published var errorMessage: String?
     @Published var isPresentingImagePicker = false
     @Published var customPrompt: String = ""
@@ -27,14 +28,18 @@ final class VisualizationViewModel: ObservableObject {
 
     private let persistenceController: PersistenceController
     private let geminiService: GeminiService
+    private let openAIService: OpenAIService
     private var analysisCache: [UUID: DetailedPhotoAnalysis] = [:]
+    private var lastAppliedOptions: [VisualizationPresetCategory: VisualizationPresetOption] = [:]
 
     init(
         persistenceController: PersistenceController = .shared,
-        geminiService: GeminiService = .shared
+        geminiService: GeminiService = .shared,
+        openAIService: OpenAIService = .shared
     ) {
         self.persistenceController = persistenceController
         self.geminiService = geminiService
+        self.openAIService = openAIService
         loadSessions()
         loadNotes()
     }
@@ -205,7 +210,11 @@ final class VisualizationViewModel: ObservableObject {
         guard !isProcessing else { return }
 
         isProcessing = true
-        defer { isProcessing = false }
+        activityMessage = "Rendering your new look…"
+        defer {
+            isProcessing = false
+            activityMessage = nil
+        }
 
         let analysis = analysisForActiveSession()?.variables
 
@@ -222,6 +231,7 @@ final class VisualizationViewModel: ObservableObject {
                 isPreset: true,
                 presetCategory: category
             )
+            lastAppliedOptions[category] = option
             activeImage = result
             refreshPresets()
         } catch {
@@ -247,7 +257,11 @@ final class VisualizationViewModel: ObservableObject {
         guard !isProcessing else { return }
 
         isProcessing = true
-        defer { isProcessing = false }
+        activityMessage = "Rendering your new look…"
+        defer {
+            isProcessing = false
+            activityMessage = nil
+        }
 
         do {
             let result = try await geminiService.generateImageEdit(
@@ -278,7 +292,11 @@ final class VisualizationViewModel: ObservableObject {
     // MARK: - Helpers
 
     private func setActiveSession(_ session: VisualizationSession) {
+        let isDifferentSession = activeSession?.objectID != session.objectID
         activeSession = session
+        if isDifferentSession {
+            lastAppliedOptions.removeAll()
+        }
         activeImage = session.latestUIImage
         refreshPresets()
     }
@@ -314,7 +332,19 @@ final class VisualizationViewModel: ObservableObject {
         loadSessions()
     }
 
-    func saveLikedLook(as category: VisualizationLookCategory) {
+    func deleteEdit(_ edit: VisualizationEdit) {
+        let context = persistenceController.viewContext
+        context.delete(edit)
+        persistenceController.saveIfNeeded(context)
+        loadSessions()
+        if let session = activeSession {
+            activeImage = session.latestUIImage
+        } else {
+            activeImage = nil
+        }
+    }
+
+    func saveLikedLook(as category: VisualizationLookCategory) async {
         #if canImport(UIKit)
         guard let session = activeSession else {
             errorMessage = "Start a visualization session before saving a note."
@@ -329,6 +359,14 @@ final class VisualizationViewModel: ObservableObject {
             return
         }
 
+        guard !isProcessing else { return }
+        isProcessing = true
+        activityMessage = "Preparing stylist brief…"
+        defer {
+            isProcessing = false
+            activityMessage = nil
+        }
+
         let context = persistenceController.viewContext
         let note = VisualizationNote(context: context)
         note.id = UUID()
@@ -338,15 +376,44 @@ final class VisualizationViewModel: ObservableObject {
         note.image = imageData
         note.session = session
 
-        let lastEdit = session.sortedEdits.last
-        let prompt = lastEdit?.prompt ?? (customPrompt.isEmpty ? nil : customPrompt)
+        let targetPresetCategory = category.presetCategory
+        let edits = session.sortedEdits
+        let relevantEdit: VisualizationEdit?
+        if let target = targetPresetCategory {
+            relevantEdit = edits.reversed().first(where: { $0.presetCategoryEnum == target })
+        } else {
+            relevantEdit = edits.last
+        }
+
+        let prompt = relevantEdit?.prompt ?? (customPrompt.isEmpty ? nil : customPrompt)
         note.prompt = prompt
+
+        let analysisVars = analysisForActiveSession()?.variables
+        let resolvedPresetCategory = relevantEdit?.presetCategoryEnum
+
+        var selectedOption: VisualizationPresetOption?
+        if let category = resolvedPresetCategory {
+            selectedOption = lastAppliedOptions[category]
+            if selectedOption == nil, let matchingPrompt = prompt {
+                selectedOption = option(for: matchingPrompt, in: category)
+            }
+        }
+
+        let lookDescription = await describeCurrentLook(
+            image: image,
+            category: category,
+            presetOption: selectedOption,
+            prompt: prompt,
+            analysis: analysisVars
+        )
 
         let composer = VisualizationNoteComposer.compose(
             category: category,
             prompt: prompt,
-            analysis: analysisForActiveSession()?.variables,
-            presetCategory: lastEdit?.presetCategoryEnum
+            analysis: analysisVars,
+            presetCategory: resolvedPresetCategory,
+            presetOption: selectedOption,
+            lookDescription: lookDescription
         )
         note.summary = composer.summary
         note.detail = composer.detail
@@ -357,4 +424,44 @@ final class VisualizationViewModel: ObservableObject {
         lastSavedNote = note
         #endif
     }
+}
+
+extension VisualizationViewModel {
+    private func option(for prompt: String, in category: VisualizationPresetCategory) -> VisualizationPresetOption? {
+        if let preset = activePresets.first(where: { $0.category == category }),
+           let match = preset.options.first(where: { $0.prompt == prompt }) {
+            return match
+        }
+
+        if let analysis = analysisForActiveSession(),
+           let preset = VisualizationPresetGenerator.presets(from: analysis).first(where: { $0.category == category }) {
+            return preset.options.first(where: { $0.prompt == prompt })
+        }
+
+        return nil
+    }
+
+    #if canImport(UIKit)
+    private func describeCurrentLook(
+        image: UIImage,
+        category: VisualizationLookCategory,
+        presetOption: VisualizationPresetOption?,
+        prompt: String?,
+        analysis: PhotoAnalysisVariables?
+    ) async -> LookDescription? {
+        guard category != .other else { return nil }
+        do {
+            return try await openAIService.describeLook(
+                image: image,
+                category: category,
+                presetOption: presetOption,
+                prompt: prompt,
+                analysis: analysis
+            )
+        } catch {
+            print("[VisualizationViewModel] Failed to generate look description: \(error)")
+            return nil
+        }
+    }
+    #endif
 }

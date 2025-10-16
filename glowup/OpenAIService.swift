@@ -131,7 +131,109 @@ actor OpenAIService {
     private var apiKey: String? {
         Secrets.openAIApiKey
     }
-    
+
+    #if canImport(UIKit)
+    func describeLook(
+        image: UIImage,
+        category: VisualizationLookCategory,
+        presetOption: VisualizationPresetOption?,
+        prompt: String?,
+        analysis: PhotoAnalysisVariables?
+    ) async throws -> LookDescription {
+        guard let jpegData = image.jpegData(compressionQuality: 0.9) else {
+            throw OpenAIError.invalidResponse
+        }
+
+        let encoded = encodeImageData(jpegData, maxDimension: 1152, compressionQuality: 0.85)
+        let attachment = VisionImageAttachment(
+            descriptor: "Current look reference",
+            base64: encoded.base64
+        )
+
+        let promptText = lookDescriptionPrompt(
+            category: category,
+            presetOption: presetOption,
+            prompt: prompt,
+            analysis: analysis
+        )
+
+        let response = try await callGPT4Vision(prompt: promptText, attachments: [attachment])
+        if let description: LookDescription = parseJSON(from: response) {
+            return description
+        }
+        throw OpenAIError.invalidResponse
+    }
+    #endif
+
+    private func lookDescriptionPrompt(
+        category: VisualizationLookCategory,
+        presetOption: VisualizationPresetOption?,
+        prompt: String?,
+        analysis: PhotoAnalysisVariables?
+    ) -> String {
+        let roleFocus = lookRole(for: category)
+
+        var contextParts: [String] = []
+        if let option = presetOption {
+            let presetTitle = option.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !presetTitle.isEmpty {
+                contextParts.append("Preset label: \(presetTitle).")
+            }
+        }
+        if let promptText = prompt?.trimmingCharacters(in: .whitespacesAndNewlines), !promptText.isEmpty {
+            contextParts.append("User prompt: \(promptText).")
+        }
+        if let analysis {
+            if let palette = analysis.seasonalPalette {
+                contextParts.append("Seasonal palette: \(palette).")
+            }
+            if category == .hair, let hairColor = analysis.hairColor {
+                contextParts.append("Natural hair color: \(hairColor).")
+            }
+            if category == .makeup, let undertone = analysis.skinUndertone {
+                contextParts.append("Skin undertone: \(undertone).")
+            }
+            if category == .outfit, !analysis.bestColors.isEmpty {
+                let paletteSample = analysis.bestColors.prefix(3).joined(separator: ", ")
+                contextParts.append("Recommended colors: \(paletteSample).")
+            }
+        }
+
+        let context = contextParts.isEmpty ? "" : "\nContext: " + contextParts.joined(separator: " ")
+
+        return """
+        You are a top-tier \(roleFocus.role). Review the attached visualization photo and describe the visible \(roleFocus.focus) exactly as shown. Focus on what is rendered and do not suggest alternate ideas.\(context)
+
+        Respond with strict JSON using this schema:
+        {
+          "styleName": "precise professional name",
+          "whatToRequest": "single clear sentence the client can tell their pro",
+          "keyDetails": ["3-5 short bullet details about shape, texture, length, or finish"],
+          "colorNotes": ["color placement or tonality notes, empty array if not relevant"],
+          "pinterestKeywords": ["4-6 concise search phrases (2-3 words each) that match the look"]
+        }
+
+        Requirements:
+        - Use salon-quality terminology that matches what you see.
+        - Keep the subject's identity and facial structure unchanged; describe only hair, makeup, or outfit styling.
+        - Pinterest keywords must be specific to the look, no generic terms like "beautiful hair".
+        - Return valid JSON only.
+        """
+    }
+
+    private func lookRole(for category: VisualizationLookCategory) -> (role: String, focus: String) {
+        switch category {
+        case .hair:
+            return ("hairstylist", "hairstyle, haircut, and styling finish")
+        case .makeup:
+            return ("makeup artist", "makeup look, complexion, and eye details")
+        case .outfit:
+            return ("fashion stylist", "outfit and garment styling")
+        case .other:
+            return ("beauty director", "overall beauty styling")
+        }
+    }
+
     init(session: URLSession = .shared) {
         if session === URLSession.shared {
             let configuration = URLSessionConfiguration.default

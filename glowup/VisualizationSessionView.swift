@@ -65,7 +65,7 @@ struct VisualizationSessionView: View {
             }
         }, message: {
             if let note = viewModel.lastSavedNote {
-                Text("We pinned this look to Notes so you can show it to your \(note.targetProfessional).")
+                Text("We pinned this look to Notes so you can show it to your \(note.professionalTitle).")
             } else {
                 Text("Saved to Notes for later.")
             }
@@ -77,7 +77,9 @@ struct VisualizationSessionView: View {
         ) {
             ForEach(VisualizationLookCategory.allCases, id: \.self) { category in
                 Button(category.displayName) {
-                    viewModel.saveLikedLook(as: category)
+                    Task {
+                        await viewModel.saveLikedLook(as: category)
+                    }
                 }
             }
             Button("Cancel", role: .cancel) { }
@@ -115,7 +117,7 @@ struct VisualizationSessionView: View {
         }
         .overlay {
             if viewModel.isProcessing {
-                LoadingOverlay(label: "Rendering your new look…")
+                LoadingOverlay(label: viewModel.activityMessage ?? "Working…")
             }
         }
     }
@@ -141,8 +143,8 @@ struct VisualizationSessionView: View {
             .shadow(color: .black.opacity(0.25), radius: 12, y: 8)
         }
         .buttonStyle(.plain)
-        .disabled(!canSave)
-        .opacity(canSave ? 1 : 0.45)
+        .disabled(!canSave || viewModel.isProcessing)
+        .opacity((canSave && !viewModel.isProcessing) ? 1 : 0.45)
         .padding(.top, 8)
     }
 
@@ -247,23 +249,33 @@ struct VisualizationSessionView: View {
                                 selectedEditID = nil
                             }
                         )
-                    }
+                }
 
-                    ForEach(session.sortedEdits, id: \.objectID) { edit in
-                        if let image = edit.resultUIImage {
-                            EditThumbnail(
-                                image: image,
-                                isActive: selectedEditID == edit.id,
-                                tapAction: {
-                                    viewModel.restoreEdit(edit)
-                                    selectedEditID = edit.id
+                ForEach(session.sortedEdits, id: \.objectID) { edit in
+                    if let image = edit.resultUIImage {
+                        EditThumbnail(
+                            image: image,
+                            isActive: selectedEditID == edit.id,
+                            tapAction: {
+                                viewModel.restoreEdit(edit)
+                                selectedEditID = edit.id
+                            }
+                        )
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                viewModel.deleteEdit(edit)
+                                if selectedEditID == edit.id {
+                                    selectedEditID = viewModel.activeSession?.sortedEdits.last?.id
                                 }
-                            )
+                            } label: {
+                                Label("Delete Edit", systemImage: "trash")
+                            }
                         }
                     }
                 }
-                .padding(.vertical, 6)
             }
+            .padding(.vertical, 6)
+        }
         }
     }
 
@@ -313,11 +325,37 @@ struct VisualizationSessionView: View {
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.7))
 
-                        LazyVStack(spacing: 12) {
-                            ForEach(preset.options, id: \.id) { option in
-                                PresetCard(category: preset.category, option: option) {
-                                    Task {
-                                        await viewModel.applyPreset(option, category: preset.category)
+                        let recommended = preset.options.filter { $0.isRecommended }
+                        let others = preset.options.filter { !$0.isRecommended }
+
+                        if !recommended.isEmpty {
+                            Text("Recommended")
+                                .font(.headline)
+                                .foregroundStyle(.white.opacity(0.85))
+
+                            LazyVStack(spacing: 12) {
+                                ForEach(recommended, id: \.id) { option in
+                                    PresetCard(category: preset.category, option: option) {
+                                        Task {
+                                            await viewModel.applyPreset(option, category: preset.category)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if !others.isEmpty {
+                            Text(recommended.isEmpty ? "Options" : "More Options")
+                                .font(.headline)
+                                .foregroundStyle(.white.opacity(0.85))
+                                .padding(.top, recommended.isEmpty ? 0 : 8)
+
+                            LazyVStack(spacing: 12) {
+                                ForEach(others, id: \.id) { option in
+                                    PresetCard(category: preset.category, option: option) {
+                                        Task {
+                                            await viewModel.applyPreset(option, category: preset.category)
+                                        }
                                     }
                                 }
                             }

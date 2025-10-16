@@ -79,7 +79,6 @@ struct NotesView: View {
                 Text(note.detail ?? "")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.7))
-                    .lineLimit(3)
 
                 HStack(spacing: 8) {
                     Label(note.lookCategory.displayName, systemImage: "tag.fill")
@@ -193,14 +192,35 @@ private struct FlexibleKeywordGrid: View {
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 10)], spacing: 10) {
             ForEach(keywords, id: \.self) { keyword in
-                Text(keyword)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(Color.white.opacity(0.14))
-                    .clipShape(Capsule())
+                if let url = pinterestURL(for: keyword) {
+                    Link(destination: url) {
+                        Text(keyword)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 10)
+                            .background(Color.white.opacity(0.14))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Text(keyword)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(Color.white.opacity(0.14))
+                        .clipShape(Capsule())
+                }
             }
         }
+    }
+
+    private func pinterestURL(for keyword: String) -> URL? {
+        let trimmed = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let query = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let urlString = "https://www.pinterest.com/search/pins/?q=\(query)&rs=typed"
+        return URL(string: urlString)
     }
 }
