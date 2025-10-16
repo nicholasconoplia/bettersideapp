@@ -2,326 +2,256 @@
 //  VisualizeView.swift
 //  glowup
 //
-//  Main visualization interface showing saved sessions and new session creation
+//  Entry point for managing visualization sessions.
 //
 
+import PhotosUI
 import SwiftUI
-import CoreData
+#if canImport(UIKit)
+import UIKit
+#endif
+
+struct VisualizationSessionRoute: Identifiable, Hashable {
+    let id: UUID
+}
 
 struct VisualizeView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-    @StateObject private var sessionManager = VisualizationSessionManager(persistenceController: PersistenceController.shared)
-    @State private var showingNewSession = false
-    @State private var selectedImageSource: ImageSourceType?
-    @State private var showingImagePicker = false
-    @State private var showingCamera = false
-    @State private var selectedPhotoSession: PhotoSession?
-    @State private var showingPhotoLibrary = false
-    
-    @FetchRequest(
-        entity: PhotoSession.entity(),
-        sortDescriptors: [NSSortDescriptor(key: "startTime", ascending: false)],
-        animation: .easeInOut
-    ) private var photoSessions: FetchedResults<PhotoSession>
-    
+    @EnvironmentObject private var viewModel: VisualizationViewModel
+    @State private var route: VisualizationSessionRoute?
+    @State private var showCameraPicker = false
+    @State private var showLibraryPicker = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
+
     var body: some View {
         NavigationStack {
             ZStack {
                 GradientBackground.primary
                     .ignoresSafeArea()
-                
-                if sessionManager.sessions.isEmpty {
+
+                if viewModel.sessions.isEmpty {
                     emptyState
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 20) {
-                            ForEach(sessionManager.sessions, id: \.objectID) { session in
-                                sessionCard(for: session)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 24)
-                    }
+                    sessionList
                 }
             }
             .navigationTitle("Visualize")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    newVisualizationButton
+                    Button {
+                        viewModel.isPresentingImagePicker = true
+                    } label: {
+                        Label("New Visualization", systemImage: "plus")
+                            .font(.headline)
+                    }
+                    .tint(.white)
                 }
             }
-            .sheet(isPresented: $showingNewSession) {
-                newSessionSheet
+            .navigationDestination(item: $route) { route in
+                VisualizationSessionView()
+                    .environmentObject(viewModel)
+                    .onAppear {
+                        if let session = viewModel.sessions.first(where: { $0.id == route.id }) {
+                            viewModel.select(session: session)
+                        }
+                    }
             }
-            .sheet(isPresented: $showingImagePicker) {
-                imageSourceSelectionSheet
+        }
+        .photosPicker(isPresented: $showLibraryPicker, selection: $selectedPhotoItem, matching: .images)
+        .sheet(isPresented: $showCameraPicker) {
+            VisualizationCameraPicker { image in
+                handleSelectedImage(image)
             }
-            .sheet(isPresented: $showingCamera) {
-                CameraView { image in
-                    createSessionWithImage(image)
+        }
+        .sheet(isPresented: Binding(
+            get: { viewModel.isPresentingImagePicker },
+            set: { viewModel.isPresentingImagePicker = $0 }
+        )) {
+            ImageSourcePicker {
+                viewModel.isPresentingImagePicker = false
+                showCameraPicker = true
+            } onLibrary: {
+                viewModel.isPresentingImagePicker = false
+                showLibraryPicker = true
+            } onUseAnalysis: {
+                viewModel.isPresentingImagePicker = false
+                viewModel.startFromLatestAnalysis()
+                if let id = viewModel.activeSession?.id {
+                    route = VisualizationSessionRoute(id: id)
                 }
             }
-            .sheet(isPresented: $showingPhotoLibrary) {
-                ImagePicker { image in
-                    createSessionWithImage(image)
-                }
-            }
-            .sheet(isPresented: $showingPhotoLibrary) {
-                PhotoSessionSelectionView { session in
-                    createSessionFromAnalysis(session)
-                }
+            .presentationDetents([.height(380)])
+            .presentationDragIndicator(.visible)
+        }
+        .onChange(of: selectedPhotoItem) { newValue in
+            guard let item = newValue else { return }
+            Task {
+                await loadImage(from: item)
             }
         }
         .onAppear {
-            sessionManager.loadSessions()
-        }
-    }
-    
-    // MARK: - Empty State
-    
-    private var emptyState: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "wand.and.stars.inverse")
-                .font(.system(size: 64))
-                .foregroundColor(.white.opacity(0.8))
-            
-            Text("Start Visualizing")
-                .font(.title2.bold())
-                .foregroundStyle(.white)
-            
-            Text("Transform your photos with AI-powered visualization. Try different hairstyles, makeup, and styles based on your analysis results.")
-                .font(.subheadline)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.8))
-                .padding(.horizontal, 40)
-            
-            Button {
-                showingNewSession = true
-            } label: {
-                Label("Create First Visualization", systemImage: "plus.circle.fill")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(red: 0.94, green: 0.34, blue: 0.56), Color.purple],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadius(15)
+            if let id = viewModel.activeSession?.id, route?.id != id {
+                route = VisualizationSessionRoute(id: id)
             }
-            .padding(.horizontal, 40)
+        }
+        .onChange(of: viewModel.activeSession?.id) { newValue in
+            if let id = newValue {
+                if route?.id != id {
+                    route = VisualizationSessionRoute(id: id)
+                }
+            } else {
+                route = nil
+            }
         }
     }
-    
-    // MARK: - Session Cards
-    
+
+    private var sessionList: some View {
+        ScrollView {
+            LazyVStack(spacing: 18) {
+                ForEach(viewModel.sessions, id: \.objectID) { session in
+                    NavigationLink {
+                        VisualizationSessionView()
+                            .environmentObject(viewModel)
+                            .onAppear {
+                                viewModel.select(session: session)
+                            }
+                    } label: {
+                        sessionCard(for: session)
+                    }
+                    .buttonStyle(.plain)
+                    .simultaneousGesture(TapGesture().onEnded {
+                        viewModel.select(session: session)
+                    })
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 28)
+        }
+    }
+
     private func sessionCard(for session: VisualizationSession) -> some View {
-        NavigationLink(destination: VisualizationSessionView(session: session)) {
-            HStack(spacing: 16) {
-                // Thumbnail
-                Group {
-                    if let image = session.baseUIImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 80, height: 80)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                    } else {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white.opacity(0.2))
-                            .frame(width: 80, height: 80)
-                            .overlay(
-                                Image(systemName: "photo")
-                                    .font(.title2)
-                                    .foregroundColor(.white.opacity(0.6))
-                            )
-                    }
-                }
-                
-                // Session Info
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Visualization Session")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                    
-                    Text(dateFormatter.string(from: session.createdAt))
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.7))
-                    
-                    let editCount = session.edits?.count ?? 0
-                    Text("\(editCount) edit\(editCount == 1 ? "" : "s")")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-                
-                Spacer()
-                
-                // Edit count badge
-                if let edits = session.edits, !edits.isEmpty {
-                    VStack(spacing: 4) {
-                        Text("\(edits.count)")
-                            .font(.title3.weight(.bold))
-                            .foregroundStyle(Color(red: 0.94, green: 0.34, blue: 0.56))
-                        Text("Edits")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.65))
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color.white.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.5))
-            }
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white.opacity(0.08))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-    
-    // MARK: - Toolbar
-    
-    private var newVisualizationButton: some View {
-        Button {
-            showingNewSession = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.body.weight(.medium))
-                .foregroundStyle(.white)
-        }
-    }
-    
-    // MARK: - Sheets
-    
-    private var newSessionSheet: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Image(systemName: "wand.and.stars.inverse")
-                    .font(.system(size: 48))
-                    .foregroundColor(.white)
-                
-                Text("Create New Visualization")
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
-                
-                Text("Choose an image to start visualizing different looks")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.8))
-                    .multilineTextAlignment(.center)
-                
-                VStack(spacing: 16) {
-                    imageSourceButton(
-                        title: "Take Photo",
-                        icon: "camera.fill",
-                        color: .blue
-                    ) {
-                        showingCamera = true
-                        showingNewSession = false
-                    }
-                    
-                    imageSourceButton(
-                        title: "Choose from Library",
-                        icon: "photo.on.rectangle",
-                        color: .green
-                    ) {
-                        showingPhotoLibrary = true
-                        showingNewSession = false
-                    }
-                    
-                    if !photoSessions.isEmpty {
-                        imageSourceButton(
-                            title: "Use from Analysis",
-                            icon: "sparkles",
-                            color: .purple
-                        ) {
-                            selectedPhotoSession = photoSessions.first
-                            showingPhotoLibrary = true
-                            showingNewSession = false
-                        }
-                    }
-                }
-                .padding(.horizontal, 40)
-                
-                Spacer()
-            }
-            .padding()
-            .background(GradientBackground.primary.ignoresSafeArea())
-            .navigationTitle("New Visualization")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        showingNewSession = false
-                    }
-                    .foregroundColor(.white)
-                }
-            }
-        }
-    }
-    
-    private func imageSourceButton(title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(.white)
-                
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
-            }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 15)
-                    .fill(color.opacity(0.2))
+        HStack(alignment: .center, spacing: 18) {
+            if let preview = session.latestUIImage {
+                Image(uiImage: preview)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 86, height: 86)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 15)
-                            .stroke(color.opacity(0.3), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
                     )
-            )
+                    .shadow(color: .black.opacity(0.2), radius: 10, y: 8)
+            } else {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+                    .frame(width: 86, height: 86)
+                    .overlay(
+                        Image(systemName: "photo")
+                            .font(.title2)
+                            .foregroundStyle(.white.opacity(0.7))
+                    )
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Session \(sessionLabel(for: session))")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+
+                if let createdAt = session.createdAt {
+                    Text(createdAt, style: .relative)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.65))
+                }
+
+                Text("\(session.sortedEdits.count) edit\(session.sortedEdits.count == 1 ? "" : "s") • Presets ready")
+                    .font(.footnote)
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.45))
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
     }
-    
-    private var imageSourceSelectionSheet: some View {
-        // This would be used for more complex image source selection
-        EmptyView()
+
+    private var emptyState: some View {
+        VStack(spacing: 22) {
+            Image(systemName: "wand.and.rays")
+                .font(.system(size: 66))
+                .foregroundStyle(.white.opacity(0.7))
+
+            Text("Welcome to Visualize")
+                .font(.largeTitle.bold())
+                .foregroundStyle(.white)
+
+            Text("Transform your glow recommendations into real visuals. Start with your latest results or upload any photo to explore hair, makeup, and wardrobe experiments.")
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.75))
+                .padding(.horizontal, 32)
+
+            Button {
+                viewModel.isPresentingImagePicker = true
+            } label: {
+                Label("Start Visualizing", systemImage: "sparkles")
+                    .font(.headline.weight(.semibold))
+                    .padding(.horizontal, 30)
+                    .padding(.vertical, 14)
+                    .background(
+                        Capsule()
+                            .fill(Color(red: 0.94, green: 0.34, blue: 0.56))
+                    )
+                    .foregroundStyle(.white)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.bottom, 80)
     }
-    
-    // MARK: - Helper Methods
-    
-    private func createSessionWithImage(_ image: UIImage) {
-        sessionManager.createSession(baseImage: image)
-        showingNewSession = false
+
+    private func handleSelectedImage(_ image: UIImage) {
+        viewModel.startSession(from: image)
+        if let id = viewModel.activeSession?.id {
+            route = VisualizationSessionRoute(id: id)
+        }
     }
-    
-    private func createSessionFromAnalysis(_ session: PhotoSession) {
-        guard let image = session.uploadedImage else { return }
-        sessionManager.createSession(baseImage: image, analysisReference: session.id)
-        showingNewSession = false
+
+    private func sessionLabel(for session: VisualizationSession) -> String {
+        if let createdAt = session.createdAt {
+            return DateFormatter.shortDateFormatter.string(from: createdAt)
+        }
+        return session.id?.uuidString.prefix(6).uppercased() ?? "New"
     }
-    
-    private let dateFormatter: DateFormatter = {
+
+    private func loadImage(from item: PhotosPickerItem) async {
+        do {
+            if let data = try await item.loadTransferable(type: Data.self),
+               let image = UIImage(data: data) {
+                await MainActor.run {
+                    handleSelectedImage(image)
+                    showLibraryPicker = false
+                }
+            }
+        } catch {
+            print("[VisualizeView] Failed to load image: \(error.localizedDescription)")
+        }
+        await MainActor.run {
+            selectedPhotoItem = nil
+        }
+    }
+}
+
+private extension DateFormatter {
+    static let shortDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
@@ -329,139 +259,44 @@ struct VisualizeView: View {
     }()
 }
 
-// MARK: - Supporting Views
-
-struct CameraView: UIViewControllerRepresentable {
-    let onImageCaptured: (UIImage) -> Void
+private struct VisualizationCameraPicker: UIViewControllerRepresentable {
+    var onCapture: (UIImage) -> Void
     @Environment(\.dismiss) private var dismiss
-    
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.delegate = context.coordinator
-        return picker
-    }
-    
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-    
+
     func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+        Coordinator(parent: self)
     }
-    
-    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: CameraView
-        
-        init(_ parent: CameraView) {
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let controller = UIImagePickerController()
+        controller.delegate = context.coordinator
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            controller.sourceType = .camera
+        } else {
+            controller.sourceType = .photoLibrary
+        }
+        controller.allowsEditing = false
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let parent: VisualizationCameraPicker
+
+        init(parent: VisualizationCameraPicker) {
             self.parent = parent
         }
-        
+
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
             if let image = info[.originalImage] as? UIImage {
-                parent.onImageCaptured(image)
+                parent.onCapture(image)
             }
             parent.dismiss()
         }
-        
+
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             parent.dismiss()
         }
     }
-}
-
-struct ImagePicker: UIViewControllerRepresentable {
-    let onImageSelected: (UIImage) -> Void
-    @Environment(\.dismiss) private var dismiss
-    
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .photoLibrary
-        picker.delegate = context.coordinator
-        return picker
-    }
-    
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: ImagePicker
-        
-        init(_ parent: ImagePicker) {
-            self.parent = parent
-        }
-        
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            if let image = info[.originalImage] as? UIImage {
-                parent.onImageSelected(image)
-            }
-            parent.dismiss()
-        }
-        
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.dismiss()
-        }
-    }
-}
-
-struct PhotoSessionSelectionView: View {
-    let onSessionSelected: (PhotoSession) -> Void
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.managedObjectContext) private var viewContext
-    
-    @FetchRequest(
-        entity: PhotoSession.entity(),
-        sortDescriptors: [NSSortDescriptor(key: "startTime", ascending: false)],
-        animation: .easeInOut
-    ) private var sessions: FetchedResults<PhotoSession>
-    
-    var body: some View {
-        NavigationStack {
-            List {
-                ForEach(sessions, id: \.objectID) { session in
-                    Button {
-                        onSessionSelected(session)
-                        dismiss()
-                    } label: {
-                        HStack {
-                            if let image = session.uploadedImage {
-                                Image(uiImage: image)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 60, height: 60)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                            }
-                            
-                            VStack(alignment: .leading) {
-                                Text(session.sessionType ?? "Static Photo")
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                
-                                Text(session.startTime?.formatted() ?? "Unknown date")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                        }
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-            }
-            .navigationTitle("Select Analysis")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
-
-#Preview {
-    VisualizeView()
 }

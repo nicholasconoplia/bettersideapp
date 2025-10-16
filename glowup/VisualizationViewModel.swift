@@ -2,27 +2,359 @@
 //  VisualizationViewModel.swift
 //  glowup
 //
-//  ViewModel for managing visualization state and navigation
+//  Central coordinator for the Visualize feature.
 //
 
-import SwiftUI
 import CoreData
+import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 @MainActor
-class VisualizationViewModel: ObservableObject {
-    @Published var pendingSession: PhotoSession?
-    @Published var pendingImage: UIImage?
-    @Published var pendingAnalysis: PhotoAnalysisVariables?
-    
-    func prepareLaunch(from session: PhotoSession) {
-        pendingSession = session
-        pendingImage = session.uploadedImage
-        pendingAnalysis = session.decodedAnalysis?.variables
+final class VisualizationViewModel: ObservableObject {
+    @Published private(set) var sessions: [VisualizationSession] = []
+    @Published var activeSession: VisualizationSession?
+    @Published var activeImage: UIImage?
+    @Published private(set) var activePresets: [VisualizationPreset] = []
+    @Published private(set) var savedNotes: [VisualizationNote] = []
+    @Published var lastSavedNote: VisualizationNote?
+    @Published var isProcessing = false
+    @Published var errorMessage: String?
+    @Published var isPresentingImagePicker = false
+    @Published var customPrompt: String = ""
+    @Published var isShowingPromptSheet = false
+
+    private let persistenceController: PersistenceController
+    private let geminiService: GeminiService
+    private var analysisCache: [UUID: DetailedPhotoAnalysis] = [:]
+
+    init(
+        persistenceController: PersistenceController = .shared,
+        geminiService: GeminiService = .shared
+    ) {
+        self.persistenceController = persistenceController
+        self.geminiService = geminiService
+        loadSessions()
+        loadNotes()
     }
-    
-    func clearPendingSession() {
-        pendingSession = nil
-        pendingImage = nil
-        pendingAnalysis = nil
+
+    // MARK: - Session Management
+
+    func loadSessions() {
+        let request = NSFetchRequest<VisualizationSession>(entityName: "VisualizationSession")
+        request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
+        do {
+            sessions = try persistenceController.viewContext.fetch(request)
+        } catch {
+            sessions = []
+            print("[VisualizationViewModel] Failed to load sessions: \(error.localizedDescription)")
+        }
+
+        if let active = activeSession,
+           let refreshed = sessions.first(where: { $0.objectID == active.objectID }) {
+            setActiveSession(refreshed)
+        }
+    }
+
+    func loadNotes() {
+        let request = NSFetchRequest<VisualizationNote>(entityName: "VisualizationNote")
+        request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
+        do {
+            savedNotes = try persistenceController.viewContext.fetch(request)
+        } catch {
+            savedNotes = []
+            print("[VisualizationViewModel] Failed to load notes: \(error.localizedDescription)")
+        }
+    }
+
+    func startSession(with launchContext: VisualizationLaunchContext) {
+        #if canImport(UIKit)
+        guard let baseData = launchContext.baseImage
+            .resized(maxDimension: 1400)?
+            .jpegData(compressionQuality: 0.92) ?? launchContext.baseImage.jpegData(compressionQuality: 0.92) else {
+            errorMessage = "Could not prepare the image for visualization."
+            return
+        }
+
+        let context = persistenceController.viewContext
+        let session = VisualizationSession(context: context)
+        session.id = UUID()
+        session.createdAt = Date()
+        session.baseImage = baseData
+        session.analysisReference = launchContext.photoSessionID
+
+        persistenceController.saveIfNeeded(context)
+        loadSessions()
+
+        if let saved = sessions.first(where: { $0.id == session.id }) {
+            setActiveSession(saved)
+        } else {
+            setActiveSession(session)
+        }
+
+        activeImage = launchContext.baseImage
+        if let analysis = launchContext.analysis, let sessionID = activeSession?.id {
+            analysisCache[sessionID] = analysis
+            refreshPresets()
+        }
+        #endif
+    }
+
+    func select(session: VisualizationSession) {
+        setActiveSession(session)
+    }
+
+    func startFromLatestAnalysis() {
+        let request = NSFetchRequest<PhotoSession>(entityName: "PhotoSession")
+        request.sortDescriptors = [NSSortDescriptor(key: "startTime", ascending: false)]
+        request.fetchLimit = 1
+        guard let latest = try? persistenceController.viewContext.fetch(request).first else {
+            errorMessage = "No completed analyses available yet."
+            return
+        }
+        prepareLaunch(from: latest)
+    }
+
+    func startSession(from image: UIImage, analysis: DetailedPhotoAnalysis? = nil, sourceID: UUID? = nil) {
+        let context = VisualizationLaunchContext(
+            baseImage: image,
+            analysis: analysis,
+            photoSessionID: sourceID
+        )
+        startSession(with: context)
+    }
+
+    func delete(session: VisualizationSession) {
+        let context = persistenceController.viewContext
+        context.delete(session)
+        persistenceController.saveIfNeeded(context)
+        if activeSession?.objectID == session.objectID {
+            activeSession = nil
+            activeImage = nil
+            activePresets = []
+        }
+        loadSessions()
+        loadNotes()
+    }
+
+    func resetActiveSession() {
+        guard let session = activeSession else { return }
+        activeImage = session.baseUIImage
+    }
+
+    func latestEdits() -> [VisualizationEdit] {
+        activeSession?.sortedEdits ?? []
+    }
+
+    func analysisForActiveSession() -> DetailedPhotoAnalysis? {
+        guard let session = activeSession,
+              let sessionID = session.id else {
+            return nil
+        }
+
+        if let cached = analysisCache[sessionID] {
+            return cached
+        }
+
+        guard let reference = session.analysisReference else {
+            return nil
+        }
+
+        let request = NSFetchRequest<PhotoSession>(entityName: "PhotoSession")
+        request.predicate = NSPredicate(format: "id == %@", reference as CVarArg)
+        request.fetchLimit = 1
+        if let matched = try? persistenceController.viewContext.fetch(request).first,
+           let analysis = matched.decodedAnalysis {
+            analysisCache[sessionID] = analysis
+            return analysis
+        }
+        return nil
+    }
+
+    func prepareLaunch(from photoSession: PhotoSession) {
+        #if canImport(UIKit)
+        guard let image = photoSession.uploadedImage else {
+            errorMessage = "This session is missing its original photo."
+            return
+        }
+        let context = VisualizationLaunchContext(
+            baseImage: image,
+            analysis: photoSession.decodedAnalysis,
+            photoSessionID: photoSession.id
+        )
+        startSession(with: context)
+        #endif
+    }
+
+    // MARK: - Editing
+
+    func applyPreset(
+        _ option: VisualizationPresetOption,
+        category: VisualizationPresetCategory
+    ) async {
+        #if canImport(UIKit)
+        guard let session = activeSession else {
+            errorMessage = "Please start a visualization session first."
+            return
+        }
+        guard let workingImage = activeImage ?? session.latestUIImage else {
+            errorMessage = "No base image available."
+            return
+        }
+        guard !isProcessing else { return }
+
+        isProcessing = true
+        defer { isProcessing = false }
+
+        let analysis = analysisForActiveSession()?.variables
+
+        do {
+            let result = try await geminiService.applyPreset(
+                baseImage: workingImage,
+                category: category,
+                option: option,
+                analysis: analysis
+            )
+            try persistEdit(
+                image: result,
+                prompt: option.prompt,
+                isPreset: true,
+                presetCategory: category
+            )
+            activeImage = result
+            refreshPresets()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        #endif
+    }
+
+    func submitCustomPrompt(_ prompt: String) async {
+        #if canImport(UIKit)
+        guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            errorMessage = "Describe what you want to try on."
+            return
+        }
+        guard let session = activeSession else {
+            errorMessage = "Start a visualization session to continue."
+            return
+        }
+        guard let workingImage = activeImage ?? session.latestUIImage else {
+            errorMessage = "No base image available."
+            return
+        }
+        guard !isProcessing else { return }
+
+        isProcessing = true
+        defer { isProcessing = false }
+
+        do {
+            let result = try await geminiService.generateImageEdit(
+                baseImage: workingImage,
+                prompt: prompt
+            )
+            try persistEdit(
+                image: result,
+                prompt: prompt,
+                isPreset: false,
+                presetCategory: nil
+            )
+            activeImage = result
+            customPrompt = ""
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        #endif
+    }
+
+    func restoreEdit(_ edit: VisualizationEdit) {
+        #if canImport(UIKit)
+        guard edit.session?.objectID == activeSession?.objectID else { return }
+        activeImage = edit.resultUIImage
+        #endif
+    }
+
+    // MARK: - Helpers
+
+    private func setActiveSession(_ session: VisualizationSession) {
+        activeSession = session
+        activeImage = session.latestUIImage
+        refreshPresets()
+    }
+
+    private func refreshPresets() {
+        activePresets = VisualizationPresetGenerator.presets(from: analysisForActiveSession())
+    }
+
+    private func persistEdit(
+        image: UIImage,
+        prompt: String,
+        isPreset: Bool,
+        presetCategory: VisualizationPresetCategory?
+    ) throws {
+        guard let session = activeSession else {
+            throw GeminiServiceError.emptyResponse
+        }
+        guard let data = image.jpegData(compressionQuality: 0.9) else {
+            throw GeminiServiceError.unsupportedImageFormat
+        }
+
+        let context = persistenceController.viewContext
+        let edit = VisualizationEdit(context: context)
+        edit.id = UUID()
+        edit.timestamp = Date()
+        edit.prompt = prompt
+        edit.isPreset = isPreset
+        edit.presetCategory = presetCategory?.rawValue
+        edit.resultImage = data
+        edit.session = session
+
+        persistenceController.saveIfNeeded(context)
+        loadSessions()
+    }
+
+    func saveLikedLook(as category: VisualizationLookCategory) {
+        #if canImport(UIKit)
+        guard let session = activeSession else {
+            errorMessage = "Start a visualization session before saving a note."
+            return
+        }
+        guard let image = activeImage ?? session.latestUIImage else {
+            errorMessage = "No visualization image available to save."
+            return
+        }
+        guard let imageData = image.jpegData(compressionQuality: 0.9) else {
+            errorMessage = "Unable to capture the current look."
+            return
+        }
+
+        let context = persistenceController.viewContext
+        let note = VisualizationNote(context: context)
+        note.id = UUID()
+        note.createdAt = Date()
+        note.category = category.rawValue
+        note.targetProfessional = category.professionalTitle
+        note.image = imageData
+        note.session = session
+
+        let lastEdit = session.sortedEdits.last
+        let prompt = lastEdit?.prompt ?? (customPrompt.isEmpty ? nil : customPrompt)
+        note.prompt = prompt
+
+        let composer = VisualizationNoteComposer.compose(
+            category: category,
+            prompt: prompt,
+            analysis: analysisForActiveSession()?.variables,
+            presetCategory: lastEdit?.presetCategoryEnum
+        )
+        note.summary = composer.summary
+        note.detail = composer.detail
+        note.keywords = composer.keywords.joined(separator: ", ")
+
+        persistenceController.saveIfNeeded(context)
+        loadNotes()
+        lastSavedNote = note
+        #endif
     }
 }

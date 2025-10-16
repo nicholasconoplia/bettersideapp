@@ -2,574 +2,450 @@
 //  VisualizationSessionView.swift
 //  glowup
 //
-//  Interactive visualization session with Puter.js integration
+//  Interactive editing surface for an active visualization session.
 //
 
 import SwiftUI
-import CoreData
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct VisualizationSessionView: View {
-    let session: VisualizationSession
-    @StateObject private var sessionState = VisualizationSessionState()
-    @StateObject private var puterService = PuterImageService()
-    @State private var customPrompt = ""
-    @State private var showingWebView = false
-    @State private var selectedPreset: VisualizationPresetOption?
-    @State private var showingImageSourcePicker = false
-    @State private var showingCamera = false
-    @State private var showingPhotoLibrary = false
-    
-    @Environment(\.managedObjectContext) private var viewContext
+    @EnvironmentObject private var viewModel: VisualizationViewModel
     @Environment(\.dismiss) private var dismiss
-    
-    // Get analysis reference if available
-    private var analysisReference: PhotoAnalysisVariables? {
-        guard let analysisRef = session.analysisReference,
-              let photoSession = fetchPhotoSession(with: analysisRef) else {
-            return nil
-        }
-        return photoSession.decodedAnalysis?.variables
+
+    @State private var selectedCategory: VisualizationPresetCategory?
+    @State private var selectedEditID: UUID?
+    @State private var showLikeDialog = false
+    @State private var showSavedAlert = false
+
+    private var activePresets: [VisualizationPreset] {
+        viewModel.activePresets
     }
-    
+
     var body: some View {
-        ZStack {
-            GradientBackground.primary
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Header
-                headerSection
-                
-                // Main Image Display
-                imageDisplaySection
-                
-                // Edit History
-                if !sessionState.editHistory.isEmpty {
-                    editHistorySection
-                }
-                
-                // Presets Grid
-                if let analysis = analysisReference {
-                    presetsSection(analysis: analysis)
-                }
-                
-                // Custom Prompt Input
-                customPromptSection
-                
-                Spacer()
-            }
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button("Change Image Source") {
-                        showingImageSourcePicker = true
-                    }
-                    
-                    Button("Open Web Interface") {
-                        showingWebView = true
-                    }
-                    
-                    if !sessionState.editHistory.isEmpty {
-                        Button("Save to Photos", role: .destructive) {
-                            saveCurrentImageToPhotos()
-                        }
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .foregroundColor(.white)
-                }
-            }
-        }
-        .sheet(isPresented: $showingWebView) {
-            PuterWebViewSheet(prompt: customPrompt)
-        }
-        .sheet(isPresented: $showingImageSourcePicker) {
-            imageSourceSelectionSheet
-        }
-        .sheet(isPresented: $showingCamera) {
-            CameraView { image in
-                updateSessionImage(image)
-            }
-        }
-        .sheet(isPresented: $showingPhotoLibrary) {
-            ImagePicker { image in
-                updateSessionImage(image)
+        VStack(spacing: 0) {
+            if let session = viewModel.activeSession,
+               let displayImage = viewModel.activeImage ?? session.latestUIImage {
+                content(for: session, displayImage: displayImage)
+            } else {
+                emptyState
             }
         }
         .onAppear {
-            loadSessionData()
-            if let analysis = analysisReference {
-                sessionState.availablePresets = VisualizationPresetGenerator.generatePresets(from: analysis)
+            syncSelectionState()
+        }
+        .onChange(of: viewModel.activePresets.map(\.category)) { _ in
+            syncCategorySelection()
+        }
+        .onChange(of: viewModel.activeSession?.sortedEdits.count ?? 0) { _ in
+            syncEditSelection()
+        }
+        .onChange(of: viewModel.lastSavedNote?.id) { id in
+            if id != nil {
+                showSavedAlert = true
+            }
+        }
+        .alert(
+            "Unable to Visualize",
+            isPresented: Binding(
+                get: { viewModel.errorMessage != nil },
+                set: { newValue in
+                    if !newValue { viewModel.errorMessage = nil }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
+        }
+        .alert("Look Saved", isPresented: $showSavedAlert, actions: {
+            Button("Great!", role: .cancel) {
+                viewModel.lastSavedNote = nil
+            }
+        }, message: {
+            if let note = viewModel.lastSavedNote {
+                Text("We pinned this look to Notes so you can show it to your \(note.targetProfessional).")
+            } else {
+                Text("Saved to Notes for later.")
+            }
+        })
+        .confirmationDialog(
+            "Who is this look for?",
+            isPresented: $showLikeDialog,
+            titleVisibility: .visible
+        ) {
+            ForEach(VisualizationLookCategory.allCases, id: \.self) { category in
+                Button(category.displayName) {
+                    viewModel.saveLikedLook(as: category)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        }
+    }
+
+    private func content(for session: VisualizationSession, displayImage: UIImage) -> some View {
+        ZStack(alignment: .bottom) {
+            ScrollView {
+                VStack(spacing: 26) {
+                    sessionHeader(session)
+                    heroImage(displayImage)
+                    editHistoryStrip(session)
+                    likeLookButton(session: session)
+                    presetsSection()
+                    analysisInsights(session)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 24)
+                .padding(.bottom, 120) // space for prompt bar
+            }
+
+            PromptInputBar(
+                text: Binding(
+                    get: { viewModel.customPrompt },
+                    set: { viewModel.customPrompt = $0 }
+                ),
+                onSubmit: {
+                    Task {
+                        await viewModel.submitCustomPrompt(viewModel.customPrompt)
+                    }
+                },
+                isLoading: viewModel.isProcessing
+            )
+        }
+        .overlay {
+            if viewModel.isProcessing {
+                LoadingOverlay(label: "Rendering your new look…")
             }
         }
     }
-    
-    // MARK: - Header Section
-    
-    private var headerSection: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.title2)
-                        .foregroundColor(.white)
-                }
-                
+
+    private func likeLookButton(session: VisualizationSession) -> some View {
+        let canSave = !session.sortedEdits.isEmpty
+        return Button {
+            showLikeDialog = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "heart.fill")
+                    .font(.headline.weight(.semibold))
+                Text("I Like This Look")
+                    .font(.headline.weight(.semibold))
                 Spacer()
-                
+                Image(systemName: "arrow.up.right")
+                    .font(.subheadline.weight(.bold))
+            }
+            .foregroundStyle(.white)
+            .padding()
+            .background(Color(red: 0.94, green: 0.34, blue: 0.56))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: .black.opacity(0.25), radius: 12, y: 8)
+        }
+        .buttonStyle(.plain)
+        .disabled(!canSave)
+        .opacity(canSave ? 1 : 0.45)
+        .padding(.top, 8)
+    }
+
+    private func sessionHeader(_ session: VisualizationSession) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text("Visualization Session")
                     .font(.headline)
-                    .foregroundColor(.white)
-                
-                Spacer()
-                
-                // Placeholder for symmetry
-                Image(systemName: "chevron.left")
-                    .font(.title2)
-                    .opacity(0)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 10)
-            
-            if let analysis = analysisReference {
-                Text("Personalized for your \(analysis.seasonalPalette?.lowercased() ?? "natural") palette")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
-                    .padding(.horizontal, 20)
-            }
-        }
-    }
-    
-    // MARK: - Image Display Section
-    
-    private var imageDisplaySection: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.black.opacity(0.3))
-                    .frame(height: 300)
-                
-                if sessionState.isLoading {
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                            .tint(.white)
-                        
-                        Text("Generating your visualization...")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                } else if let image = sessionState.currentImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .cornerRadius(20)
-                        .shadow(color: .black.opacity(0.3), radius: 10, y: 5)
-                } else if let baseImage = session.baseUIImage {
-                    Image(uiImage: baseImage)
-                        .resizable()
-                        .scaledToFit()
-                        .cornerRadius(20)
-                        .shadow(color: .black.opacity(0.3), radius: 10, y: 5)
-                } else {
-                    VStack(spacing: 12) {
-                        Image(systemName: "photo")
-                            .font(.system(size: 48))
-                            .foregroundColor(.white.opacity(0.6))
-                        
-                        Text("No image available")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                }
-            }
-            .padding(.horizontal, 20)
-            
-            // Error display
-            if let error = sessionState.errorMessage {
-                Text("Error: \(error)")
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(8)
-                    .padding(.horizontal, 20)
-            }
-        }
-    }
-    
-    // MARK: - Edit History Section
-    
-    private var editHistorySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Edit History")
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    // Original image
-                    Button {
-                        sessionState.currentImage = session.baseUIImage
-                    } label: {
-                        VStack(spacing: 8) {
-                            Image(uiImage: session.baseUIImage ?? UIImage())
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 80, height: 80)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                )
-                            
-                            Text("Original")
-                                .font(.caption2)
-                                .foregroundColor(.white.opacity(0.8))
-                        }
-                    }
-                    
-                    // Edit history
-                    ForEach(sessionState.editHistory, id: \.objectID) { edit in
-                        Button {
-                            sessionState.currentImage = edit.resultUIImage
-                        } label: {
-                            VStack(spacing: 8) {
-                                Image(uiImage: edit.resultUIImage ?? UIImage())
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 80, height: 80)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                    )
-                                
-                                Text((edit.timestamp ?? Date()).formatted(date: .omitted, time: .shortened))
-                                    .font(.caption2)
-                                    .foregroundColor(.white.opacity(0.8))
-                                    .lineLimit(1)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-        }
-        .padding(.vertical, 16)
-    }
-    
-    // MARK: - Presets Section
-    
-    private func presetsSection(analysis: PhotoAnalysisVariables) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Smart Presets")
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(VisualizationPresetCategory.allCases, id: \.id) { category in
-                        if let presets = sessionState.availablePresets[category], !presets.isEmpty {
-                            presetCategoryCard(category: category, presets: presets)
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-        }
-    }
-    
-    private func presetCategoryCard(category: VisualizationPresetCategory, presets: [VisualizationPresetOption]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: category.icon)
-                    .foregroundColor(Color(category.color))
-                
-                Text(category.displayName)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-                
-                Spacer()
-            }
-            
-            VStack(spacing: 8) {
-                ForEach(presets.prefix(3), id: \.id) { preset in
-                    Button {
-                        applyPreset(preset)
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(preset.title)
-                                    .font(.caption.weight(.medium))
-                                    .foregroundColor(.white)
-                                
-                                Text(preset.subtitle)
-                                    .font(.caption2)
-                                    .foregroundColor(.white.opacity(0.7))
-                                    .lineLimit(1)
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.white.opacity(0.1))
-                        )
-                    }
-                    .disabled(sessionState.isLoading)
-                }
-            }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.08))
-        )
-        .frame(width: 200)
-    }
-    
-    // MARK: - Custom Prompt Section
-    
-    private var customPromptSection: some View {
-        VStack(spacing: 16) {
-            TextField("Describe your desired changes...", text: $customPrompt, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
-                .lineLimit(2...4)
-                .padding(.horizontal, 20)
-            
-            HStack(spacing: 12) {
-                Button {
-                    generateCustomVisualization()
-                } label: {
-                    HStack {
-                        if sessionState.isLoading {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                                .tint(.white)
-                        } else {
-                            Image(systemName: "sparkles")
-                        }
-                        
-                        Text(sessionState.isLoading ? "Generating..." : "Generate")
-                    }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(red: 0.94, green: 0.34, blue: 0.56), Color.purple],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadius(15)
-                }
-                .disabled(sessionState.isLoading || customPrompt.isEmpty)
-                
-                Button {
-                    showingWebView = true
-                } label: {
-                    Image(systemName: "globe")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(15)
-                }
-            }
-            .padding(.horizontal, 20)
-        }
-        .padding(.vertical, 16)
-    }
-    
-    // MARK: - Image Source Selection Sheet
-    
-    private var imageSourceSelectionSheet: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Image(systemName: "photo.on.rectangle")
-                    .font(.system(size: 48))
-                    .foregroundColor(.white)
-                
-                Text("Change Image Source")
-                    .font(.title2.bold())
                     .foregroundStyle(.white)
-                
-                VStack(spacing: 16) {
-                    imageSourceButton(
-                        title: "Take New Photo",
-                        icon: "camera.fill",
-                        color: .blue
-                    ) {
-                        showingCamera = true
-                        showingImageSourcePicker = false
-                    }
-                    
-                    imageSourceButton(
-                        title: "Choose from Library",
-                        icon: "photo.on.rectangle",
-                        color: .green
-                    ) {
-                        showingPhotoLibrary = true
-                        showingImageSourcePicker = false
-                    }
-                }
-                .padding(.horizontal, 40)
-                
-                Spacer()
-            }
-            .padding()
-            .background(GradientBackground.primary.ignoresSafeArea())
-            .navigationTitle("Image Source")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        showingImageSourcePicker = false
-                    }
-                    .foregroundColor(.white)
-                }
-            }
-        }
-    }
-    
-    private func imageSourceButton(title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(.white)
-                
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
-            }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 15)
-                    .fill(color.opacity(0.2))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 15)
-                            .stroke(color.opacity(0.3), lineWidth: 1)
-                    )
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-    
-    // MARK: - Helper Methods
-    
-    private func loadSessionData() {
-        sessionState.editHistory = session.sortedEdits
-        sessionState.currentImage = session.latestEdit?.resultUIImage ?? session.baseUIImage
-    }
-    
-    private func applyPreset(_ preset: VisualizationPresetOption) {
-        Task {
-            await sessionState.applyPreset(preset, baseImage: session.baseUIImage)
-            
-            if let resultImage = sessionState.currentImage {
-                // Save the edit to Core Data
-                let context = viewContext
-                let edit = VisualizationEdit(context: context)
-                edit.id = UUID()
-                edit.timestamp = Date()
-                edit.prompt = preset.prompt
-                edit.resultImage = resultImage.jpegData(compressionQuality: 0.8)
-                edit.isPreset = true
-                edit.presetCategory = preset.category.rawValue
-                edit.session = session
-                
-                do {
-                    try context.save()
-                    loadSessionData() // Reload to include new edit
-                } catch {
-                    print("Failed to save preset edit: \(error)")
-                }
-            }
-        }
-    }
-    
-    private func generateCustomVisualization() {
-        Task {
-            await sessionState.generateImage(
-                prompt: customPrompt,
-                baseImage: session.baseUIImage
-            )
-            
-            if let resultImage = sessionState.currentImage {
-                // Save the edit to Core Data
-                let context = viewContext
-                let edit = VisualizationEdit(context: context)
-                edit.id = UUID()
-                edit.timestamp = Date()
-                edit.prompt = customPrompt
-                edit.resultImage = resultImage.jpegData(compressionQuality: 0.8)
-                edit.isPreset = false
-                edit.session = session
-                
-                do {
-                    try context.save()
-                    loadSessionData() // Reload to include new edit
-                    customPrompt = "" // Clear the prompt
-                } catch {
-                    print("Failed to save custom edit: \(error)")
-                }
-            }
-        }
-    }
-    
-    private func updateSessionImage(_ image: UIImage) {
-        // Update the session's base image
-        session.baseImage = image.jpegData(compressionQuality: 0.8)
-        
-        do {
-            try viewContext.save()
-            sessionState.currentImage = image
-            sessionState.editHistory = [] // Clear edit history
-        } catch {
-            print("Failed to update session image: \(error)")
-        }
-    }
-    
-    private func saveCurrentImageToPhotos() {
-        guard let image = sessionState.currentImage else { return }
-        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-    }
-    
-    private func fetchPhotoSession(with id: UUID) -> PhotoSession? {
-        let request = NSFetchRequest<PhotoSession>(entityName: "PhotoSession")
-        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
-        request.fetchLimit = 1
-        
-        return try? viewContext.fetch(request).first
-    }
-}
 
-#Preview {
-    let context = PersistenceController.shared.viewContext
-    let session = VisualizationSession(context: context)
-    session.id = UUID()
-    session.createdAt = Date()
-    
-    return NavigationStack {
-        VisualizationSessionView(session: session)
+                if let createdAt = session.createdAt {
+                    Text(createdAt, style: .date)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+
+                if let reference = session.analysisReference {
+                    Text("Linked to analysis #\(reference.uuidString.prefix(6))")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.55))
+                }
+            }
+
+            Spacer()
+
+            Menu {
+                Button {
+                    viewModel.resetActiveSession()
+                    selectedEditID = nil
+                } label: {
+                    Label("Revert to Original", systemImage: "arrow.uturn.backward.circle")
+                }
+
+                Button {
+                    viewModel.startFromLatestAnalysis()
+                } label: {
+                    Label("Reload Latest Analysis", systemImage: "sparkles.rectangle.stack.fill")
+                }
+
+                Button(role: .destructive) {
+                    viewModel.delete(session: session)
+                    dismiss()
+                } label: {
+                    Label("Delete Session", systemImage: "trash.fill")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .padding(6)
+            }
+        }
+    }
+
+    private func heroImage(_ image: UIImage) -> some View {
+        Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.35), radius: 24, y: 16)
+            .contextMenu {
+                Button {
+                    viewModel.isPresentingImagePicker = true
+                } label: {
+                    Label("Change Base Image", systemImage: "photo.on.rectangle")
+                }
+            }
+    }
+
+    private func editHistoryStrip(_ session: VisualizationSession) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Edit History")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Spacer()
+                Button {
+                    viewModel.isPresentingImagePicker = true
+                } label: {
+                    Label("Change Image", systemImage: "camera.rotate")
+                        .font(.footnote.weight(.semibold))
+                        .padding(8)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
+                    if let base = session.baseUIImage {
+                        EditThumbnail(
+                            image: base,
+                            isActive: selectedEditID == nil,
+                            tapAction: {
+                                viewModel.resetActiveSession()
+                                selectedEditID = nil
+                            }
+                        )
+                    }
+
+                    ForEach(session.sortedEdits, id: \.objectID) { edit in
+                        if let image = edit.resultUIImage {
+                            EditThumbnail(
+                                image: image,
+                                isActive: selectedEditID == edit.id,
+                                tapAction: {
+                                    viewModel.restoreEdit(edit)
+                                    selectedEditID = edit.id
+                                }
+                            )
+                        }
+                    }
+                }
+                .padding(.vertical, 6)
+            }
+        }
+    }
+
+    private func presetsSection() -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("AI Presets")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
+                Spacer()
+            }
+
+            if activePresets.isEmpty {
+                Text("Once you have an analysis linked, smart presets will appear here.")
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.white.opacity(0.05))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(activePresets, id: \.category) { preset in
+                            let isSelected = preset.category == selectedCategory
+                            Button {
+                                selectedCategory = preset.category
+                            } label: {
+                                Text(preset.category.displayName)
+                                    .font(.subheadline.weight(.semibold))
+                                    .padding(.horizontal, 18)
+                                    .padding(.vertical, 10)
+                                    .background(
+                                        Capsule()
+                                            .fill(isSelected ? Color.white.opacity(0.25) : Color.white.opacity(0.08))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                if let category = selectedCategory,
+                   let preset = activePresets.first(where: { $0.category == category }) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(preset.description)
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.7))
+
+                        LazyVStack(spacing: 12) {
+                            ForEach(preset.options, id: \.id) { option in
+                                PresetCard(category: preset.category, option: option) {
+                                    Task {
+                                        await viewModel.applyPreset(option, category: preset.category)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.top, 6)
+                }
+            }
+        }
+    }
+
+    private func analysisInsights(_ session: VisualizationSession) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Guidance Notes")
+                .font(.headline)
+                .foregroundStyle(.white)
+
+            if let analysis = viewModel.analysisForActiveSession() {
+                VStack(alignment: .leading, spacing: 10) {
+                    if let faceShape = analysis.variables.faceShape {
+                        insightRow(title: "Face Shape", value: faceShape)
+                    }
+                    if let palette = analysis.variables.seasonalPalette {
+                        insightRow(title: "Palette", value: palette)
+                    }
+                    if let makeupStyle = analysis.variables.makeupStyle as String? {
+                        insightRow(title: "Preferred Makeup", value: makeupStyle)
+                    }
+                    if !analysis.variables.bestColors.isEmpty {
+                        insightRow(
+                            title: "Power Colors",
+                            value: analysis.variables.bestColors.joined(separator: ", ")
+                        )
+                    }
+                    if !analysis.variables.quickWins.isEmpty {
+                        insightRow(
+                            title: "Quick Wins",
+                            value: analysis.variables.quickWins.prefix(2).joined(separator: ", ")
+                        )
+                    }
+                }
+                .padding()
+                .background(Color.white.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            } else {
+                Text("Run a fresh analysis to unlock tailored presets and insights.")
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding()
+                    .background(Color.white.opacity(0.05))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            }
+        }
+    }
+
+    private func insightRow(title: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Circle()
+                .fill(Color.white.opacity(0.15))
+                .frame(width: 8, height: 8)
+                .padding(.top, 6)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.75))
+                Text(value)
+                    .font(.body)
+                    .foregroundStyle(.white)
+            }
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "wand.and.stars")
+                .font(.system(size: 56))
+                .foregroundStyle(.white.opacity(0.65))
+
+            Text("Visualize Your Next Look")
+                .font(.title2.weight(.bold))
+                .foregroundStyle(.white)
+
+            Text("Send a look from your analysis or upload a fresh photo to start transforming your glow story.")
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.75))
+                .padding(.horizontal, 28)
+
+            Button {
+                viewModel.isPresentingImagePicker = true
+            } label: {
+                Label("Start Visualization", systemImage: "sparkles")
+                    .font(.headline)
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 14)
+                    .background(
+                        Capsule()
+                            .fill(Color(red: 0.94, green: 0.34, blue: 0.56))
+                    )
+                    .foregroundStyle(.white)
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.clear)
+        .padding(.bottom, 80)
+    }
+
+    private func syncSelectionState() {
+        syncCategorySelection()
+        syncEditSelection()
+    }
+
+    private func syncCategorySelection() {
+        if selectedCategory == nil, let first = activePresets.first {
+            selectedCategory = first.category
+        } else if let selected = selectedCategory,
+                  !activePresets.contains(where: { $0.category == selected }) {
+            selectedCategory = activePresets.first?.category
+        }
+    }
+
+    private func syncEditSelection() {
+        guard let session = viewModel.activeSession else {
+            selectedEditID = nil
+            return
+        }
+        selectedEditID = session.sortedEdits.last?.id
     }
 }

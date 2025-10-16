@@ -2,398 +2,358 @@
 //  VisualizationPresetGenerator.swift
 //  glowup
 //
-//  Generates smart presets based on PhotoAnalysisVariables
+//  Builds contextual visualization presets from photo analysis results.
 //
 
 import Foundation
 
 struct VisualizationPresetGenerator {
-    
-    static func generatePresets(from analysis: PhotoAnalysisVariables) -> [VisualizationPresetCategory: [VisualizationPresetOption]] {
-        var presets: [VisualizationPresetCategory: [VisualizationPresetOption]] = [:]
-        
-        // Generate hair style presets based on face shape
-        presets[.hairStyles] = generateHairStylePresets(from: analysis)
-        
-        // Generate hair color presets based on seasonal palette
-        presets[.hairColors] = generateHairColorPresets(from: analysis)
-        
-        // Generate makeup presets based on analysis
-        presets[.makeup] = generateMakeupPresets(from: analysis)
-        
-        // Generate clothing presets based on best colors
-        presets[.clothing] = generateClothingPresets(from: analysis)
-        
-        // Generate accessory presets
-        presets[.accessories] = generateAccessoryPresets(from: analysis)
-        
-        // Generate style variation presets
-        presets[.styleVariations] = generateStyleVariationPresets(from: analysis)
-        
+    static func presets(from analysis: DetailedPhotoAnalysis?) -> [VisualizationPreset] {
+        let vars = analysis?.variables
+        var presets: [VisualizationPreset] = []
+
+        presets.append(
+            VisualizationPreset(
+                category: .hairstyles,
+                headline: "Face-Flattering Hair",
+                description: "Haircuts that complement your structure and add balance.",
+                options: hairstyleOptions(faceShape: vars?.faceShape, genderTone: vars?.genderDimorphism),
+                priority: 1,
+                requiresAnalysis: true
+            )
+        )
+
+        presets.append(
+            VisualizationPreset(
+                category: .hairColors,
+                headline: "Seasonal Color Play",
+                description: "Hair color experiments guided by your palette.",
+                options: hairColorOptions(palette: vars?.seasonalPalette, bestColors: vars?.bestColors ?? []),
+                priority: 2,
+                requiresAnalysis: true
+            )
+        )
+
+        presets.append(
+            VisualizationPreset(
+                category: .makeup,
+                headline: "Makeup Mood Board",
+                description: "See makeup intensities that elevate your features.",
+                options: makeupOptions(style: vars?.makeupStyle, eyeColor: vars?.eyeColor, quickWins: vars?.quickWins ?? []),
+                priority: 3,
+                requiresAnalysis: true
+            )
+        )
+
+        presets.append(
+            VisualizationPreset(
+                category: .clothing,
+                headline: "Wardrobe Palette Swaps",
+                description: "Test outfit colors that boost your glow score.",
+                options: clothingOptions(bestColors: vars?.bestColors ?? [], avoidColors: vars?.avoidColors ?? []),
+                priority: 4,
+                requiresAnalysis: true
+            )
+        )
+
+        presets.append(
+            VisualizationPreset(
+                category: .accessories,
+                headline: "Finish With Accessories",
+                description: "Subtle changes that sharpen your overall vibe.",
+                options: accessoryOptions(accessoryBalance: vars?.accessoryBalance ?? 5),
+                priority: 5,
+                requiresAnalysis: false
+            )
+        )
+
+        presets.append(
+            VisualizationPreset(
+                category: .finishingTouches,
+                headline: "Final Polish Tweaks",
+                description: "Lighting, smoothing, and editorial polish options.",
+                options: finishingOptions(lightingType: vars?.lightingType, compositionFeedback: vars?.compositionFeedback),
+                priority: 6,
+                requiresAnalysis: false
+            )
+        )
+
         return presets
     }
-    
-    // MARK: - Hair Style Presets
-    
-    private static func generateHairStylePresets(from analysis: PhotoAnalysisVariables) -> [VisualizationPresetOption] {
-        let faceShape = analysis.faceShape?.lowercased() ?? ""
-        let genderDimorphism = analysis.genderDimorphism.lowercased()
-        
-        var presets: [VisualizationPresetOption] = []
-        
-        // Face shape based recommendations
-        if faceShape.contains("oval") || faceShape.contains("round") {
-            presets.append(VisualizationPresetOption(
-                title: "Long Layers",
-                subtitle: "Flatters oval and round faces",
-                prompt: "Change the hairstyle to long, face-framing layers that enhance the natural face shape. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairStyles
-            ))
-            
-            presets.append(VisualizationPresetOption(
-                title: "Side Part",
-                subtitle: "Adds definition to round faces",
-                prompt: "Change the hairstyle to a side-parted style that adds definition and length to the face. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairStyles
-            ))
+
+    private static func hairstyleOptions(
+        faceShape: String?,
+        genderTone: String?
+    ) -> [VisualizationPresetOption] {
+        let shape = faceShape?.lowercased() ?? ""
+
+        let balancingLayers = VisualizationPresetOption(
+            title: "Framing Layers",
+            subtitle: "Soft curtain fringe hugging the cheeks.",
+            prompt: """
+            Add airy curtain bangs and jaw-grazing layers that skim the cheekbones. Maintain realistic density and ensure the fringe opens gently at the center.
+            """
+        )
+
+        let sleekBob = VisualizationPresetOption(
+            title: "Sleek Sculpted Bob",
+            subtitle: "Precision bob grazing the jawline.",
+            prompt: """
+            Transform the hair into a sleek, one-length bob that hits right at the jaw for contouring. Keep the finish glossy and tuck one side behind the ear.
+            """
+        )
+
+        let volumizedWaves = VisualizationPresetOption(
+            title: "Voluminous Waves",
+            subtitle: "Polished blowout with glam body.",
+            prompt: """
+            Style full, polished waves starting mid-length with softness around the face. Add modern shine and believable bounce without over-airbrushing.
+            """
+        )
+
+        let liftedPony = VisualizationPresetOption(
+            title: "Snatched Pony",
+            subtitle: "High ponytail with face lift effect.",
+            prompt: """
+            Create a high, lifted ponytail with sleek roots and refined face-framing tendrils. Ensure the style feels editorial yet wearable for everyday photos.
+            """
+        )
+
+        if shape.contains("heart") || shape.contains("diamond") {
+            return [balancingLayers, volumizedWaves, liftedPony, sleekBob]
+        } else if shape.contains("round") {
+            return [sleekBob, liftedPony, volumizedWaves, balancingLayers]
+        } else if shape.contains("square") {
+            return [volumizedWaves, balancingLayers, liftedPony, sleekBob]
+        } else {
+            return [balancingLayers, volumizedWaves, sleekBob, liftedPony]
         }
-        
-        if faceShape.contains("square") || faceShape.contains("angular") {
-            presets.append(VisualizationPresetOption(
-                title: "Soft Waves",
-                subtitle: "Softens angular features",
-                prompt: "Change the hairstyle to soft, flowing waves that soften angular features. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairStyles
-            ))
-        }
-        
-        if faceShape.contains("heart") || faceShape.contains("triangle") {
-            presets.append(VisualizationPresetOption(
-                title: "Chin-Length Bob",
-                subtitle: "Balances heart-shaped faces",
-                prompt: "Change the hairstyle to a chin-length bob that balances the face shape. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairStyles
-            ))
-        }
-        
-        // Gender-appropriate styles
-        if genderDimorphism.contains("feminine") || genderDimorphism.contains("female") {
-            presets.append(VisualizationPresetOption(
-                title: "Loose Curls",
-                subtitle: "Natural, romantic look",
-                prompt: "Change the hairstyle to loose, natural curls for a romantic and feminine look. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairStyles
-            ))
-        } else if genderDimorphism.contains("masculine") || genderDimorphism.contains("male") {
-            presets.append(VisualizationPresetOption(
-                title: "Textured Crop",
-                subtitle: "Modern, professional look",
-                prompt: "Change the hairstyle to a modern textured crop that's professional and stylish. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairStyles
-            ))
-        }
-        
-        // Fallback options
-        if presets.isEmpty {
-            presets.append(VisualizationPresetOption(
-                title: "Natural Waves",
-                subtitle: "Universal flattering style",
-                prompt: "Change the hairstyle to natural, flowing waves that enhance the person's features. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairStyles
-            ))
-        }
-        
-        return presets
     }
-    
-    // MARK: - Hair Color Presets
-    
-    private static func generateHairColorPresets(from analysis: PhotoAnalysisVariables) -> [VisualizationPresetOption] {
-        let seasonalPalette = analysis.seasonalPalette?.lowercased() ?? ""
-        let currentHairColor = analysis.hairColor?.lowercased() ?? ""
-        let bestColors = analysis.bestColors.map { $0.lowercased() }
-        
-        var presets: [VisualizationPresetOption] = []
-        
-        // Seasonal palette based colors
-        if seasonalPalette.contains("spring") {
-            presets.append(VisualizationPresetOption(
-                title: "Golden Blonde",
-                subtitle: "Perfect for Spring palette",
-                prompt: "Change the hair color to a warm, golden blonde that complements the Spring color palette. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairColors
-            ))
-            
-            presets.append(VisualizationPresetOption(
-                title: "Copper Highlights",
-                subtitle: "Warm Spring tones",
-                prompt: "Add warm copper highlights to enhance the Spring palette colors. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairColors
-            ))
+
+    private static func hairColorOptions(
+        palette: String?,
+        bestColors: [String]
+    ) -> [VisualizationPresetOption] {
+        let paletteName = (palette ?? "Neutral").lowercased()
+        let heroColor = bestColors.first ?? "soft latte"
+
+        let sunKissed = VisualizationPresetOption(
+            title: "Sun-Kissed Dimension",
+            subtitle: "Glossy babylights hugging the face.",
+            prompt: """
+            Add luminous, fine babylights around the face with a sun-kissed gradient toward the ends. Keep roots diffused and believable.
+            """,
+            swatchHex: paletteName.contains("spring") ? "#f6c28b" : "#d9a86c"
+        )
+
+        let coolGloss = VisualizationPresetOption(
+            title: "Cool Espresso",
+            subtitle: "Neutralize warmth with espresso glaze.",
+            prompt: """
+            Apply a cool espresso glaze that smooths warmth but keeps natural depth. Maintain high-shine finish and detailed strands.
+            """,
+            swatchHex: paletteName.contains("winter") ? "#2f2626" : "#3a2b27"
+        )
+
+        let copperPop = VisualizationPresetOption(
+            title: "Copper Pop",
+            subtitle: "Strategic ribboning for glow contrast.",
+            prompt: """
+            Introduce thin copper ribbons through the mid-lengths that echo \(heroColor) tones. Blend softly for a luxe, editorial feel.
+            """,
+            swatchHex: "#c96f3b"
+        )
+
+        let dimensionalBrunette = VisualizationPresetOption(
+            title: "Dimensional Brunette",
+            subtitle: "Shadow root with tonal gradient.",
+            prompt: """
+            Create a dimensional brunette with a shadow root and softly brushed caramel panels. Keep transitions believable and hair health intact.
+            """,
+            swatchHex: "#8b5a2b"
+        )
+
+        if paletteName.contains("summer") || paletteName.contains("winter") {
+            return [coolGloss, sunKissed, dimensionalBrunette, copperPop]
+        } else {
+            return [sunKissed, dimensionalBrunette, copperPop, coolGloss]
         }
-        
-        if seasonalPalette.contains("summer") {
-            presets.append(VisualizationPresetOption(
-                title: "Ash Blonde",
-                subtitle: "Cool Summer tones",
-                prompt: "Change the hair color to a cool, ash blonde that complements the Summer color palette. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairColors
-            ))
-            
-            presets.append(VisualizationPresetOption(
-                title: "Soft Brown",
-                subtitle: "Natural Summer color",
-                prompt: "Change the hair color to a soft, natural brown with cool undertones. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairColors
-            ))
-        }
-        
-        if seasonalPalette.contains("autumn") {
-            presets.append(VisualizationPresetOption(
-                title: "Rich Auburn",
-                subtitle: "Warm Autumn tones",
-                prompt: "Change the hair color to a rich, warm auburn that complements the Autumn color palette. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairColors
-            ))
-            
-            presets.append(VisualizationPresetOption(
-                title: "Deep Chestnut",
-                subtitle: "Warm brown with red undertones",
-                prompt: "Change the hair color to a deep chestnut brown with warm red undertones. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairColors
-            ))
-        }
-        
-        if seasonalPalette.contains("winter") {
-            presets.append(VisualizationPresetOption(
-                title: "Jet Black",
-                subtitle: "Bold Winter contrast",
-                prompt: "Change the hair color to a deep, rich black that creates striking contrast. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairColors
-            ))
-            
-            presets.append(VisualizationPresetOption(
-                title: "Platinum Blonde",
-                subtitle: "Cool Winter tones",
-                prompt: "Change the hair color to a cool platinum blonde that complements the Winter palette. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairColors
-            ))
-        }
-        
-        // Best colors based recommendations
-        if bestColors.contains(where: { $0.contains("gold") || $0.contains("amber") }) {
-            presets.append(VisualizationPresetOption(
-                title: "Honey Highlights",
-                subtitle: "Matches your best colors",
-                prompt: "Add honey-colored highlights that match your best colors. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairColors
-            ))
-        }
-        
-        // Fallback options
-        if presets.isEmpty {
-            presets.append(VisualizationPresetOption(
-                title: "Natural Highlights",
-                subtitle: "Subtle enhancement",
-                prompt: "Add subtle natural highlights that enhance the current hair color. Keep the person's face, features, and clothing exactly the same, preserving the original lighting and photo quality.",
-                category: .hairColors
-            ))
-        }
-        
-        return presets
     }
-    
-    // MARK: - Makeup Presets
-    
-    private static func generateMakeupPresets(from analysis: PhotoAnalysisVariables) -> [VisualizationPresetOption] {
-        let makeupStyle = analysis.makeupStyle.lowercased()
-        let eyeColor = analysis.eyeColor?.lowercased() ?? ""
-        let bestColors = analysis.bestColors.map { $0.lowercased() }
-        
-        var presets: [VisualizationPresetOption] = []
-        
-        // Style-based makeup
-        if makeupStyle.contains("natural") || makeupStyle.contains("minimal") {
-            presets.append(VisualizationPresetOption(
-                title: "Natural Glow",
-                subtitle: "Enhances natural beauty",
-                prompt: "Apply natural makeup with subtle glow and definition. Use soft, neutral tones that enhance the natural features. Keep the person's face shape, hair, and clothing unchanged, maintaining the original photo quality.",
-                category: .makeup
-            ))
+
+    private static func makeupOptions(
+        style: String?,
+        eyeColor: String?,
+        quickWins: [String]
+    ) -> [VisualizationPresetOption] {
+        let normalizedStyle = style?.lowercased() ?? "natural"
+        let eyeDescriptor = eyeColor ?? "eyes"
+        let quickFocus = quickWins.first ?? "Enhanced glow"
+
+        let cleanGirl = VisualizationPresetOption(
+            title: "Fresh & Dewy",
+            subtitle: "Skin liquidity with brushed-up brows.",
+            prompt: """
+            Apply a dewy complexion, feathery brows, subtle tightlined eyes, and juicy nude lips. Showcase soft highlight on the high points and hydrated skin.
+            """
+        )
+
+        let softGlam = VisualizationPresetOption(
+            title: "Soft Glam",
+            subtitle: "Smoky warmth hugging the lash line.",
+            prompt: """
+            Create a warm halo eye with shimmer at the center, a refined contour, and plush peachy lips. Keep lashes wispy and flattering for \(eyeDescriptor.lowercased()).
+            """
+        )
+
+        let coolEditorial = VisualizationPresetOption(
+            title: "Cool Editorial",
+            subtitle: "Monochrome glaze with glossed lids.",
+            prompt: """
+            Layer a cool-toned monochrome look with glassy lids, sculpted cheeks, and a vinyl lip. Maintain believable skin texture and keep glow buildable.
+            """
+        )
+
+        let powerLook = VisualizationPresetOption(
+            title: "Statement Wing",
+            subtitle: "\(quickFocus) with lifted liner.",
+            prompt: """
+            Add a snatched eyeliner wing, softly smoked lower lash line, and a satin berry lip. Ensure complexion remains polished but natural.
+            """
+        )
+
+        if normalizedStyle.contains("glam") || normalizedStyle.contains("dramatic") {
+            return [softGlam, powerLook, coolEditorial, cleanGirl]
+        } else if normalizedStyle.contains("none") {
+            return [cleanGirl, softGlam, powerLook, coolEditorial]
+        } else {
+            return [cleanGirl, softGlam, powerLook, coolEditorial]
         }
-        
-        if makeupStyle.contains("glam") || makeupStyle.contains("dramatic") {
-            presets.append(VisualizationPresetOption(
-                title: "Glamorous Evening",
-                subtitle: "Bold and sophisticated",
-                prompt: "Apply glamorous evening makeup with bold eyes and defined features. Use rich, sophisticated colors that create drama. Keep the person's face shape, hair, and clothing unchanged, maintaining the original photo quality.",
-                category: .makeup
-            ))
-        }
-        
-        // Eye color based makeup
-        if eyeColor.contains("blue") || eyeColor.contains("green") {
-            presets.append(VisualizationPresetOption(
-                title: "Warm Eye Makeup",
-                subtitle: "Complements cool eyes",
-                prompt: "Apply warm-toned eye makeup that makes blue or green eyes pop. Use golds, bronzes, and warm browns. Keep the person's face shape, hair, and clothing unchanged, maintaining the original photo quality.",
-                category: .makeup
-            ))
-        }
-        
-        if eyeColor.contains("brown") || eyeColor.contains("hazel") {
-            presets.append(VisualizationPresetOption(
-                title: "Cool Eye Makeup",
-                subtitle: "Enhances brown eyes",
-                prompt: "Apply cool-toned eye makeup that enhances brown or hazel eyes. Use purples, blues, and cool grays. Keep the person's face shape, hair, and clothing unchanged, maintaining the original photo quality.",
-                category: .makeup
-            ))
-        }
-        
-        // Best colors based lip makeup
-        if bestColors.contains(where: { $0.contains("red") || $0.contains("coral") }) {
-            presets.append(VisualizationPresetOption(
-                title: "Red Lip Classic",
-                subtitle: "Matches your best colors",
-                prompt: "Apply a classic red lipstick that matches your best colors. Keep the rest of the makeup natural and balanced. Keep the person's face shape, hair, and clothing unchanged, maintaining the original photo quality.",
-                category: .makeup
-            ))
-        }
-        
-        // Fallback options
-        if presets.isEmpty {
-            presets.append(VisualizationPresetOption(
-                title: "Soft Natural Look",
-                subtitle: "Universal flattering makeup",
-                prompt: "Apply soft, natural makeup that enhances the person's features without being overwhelming. Use neutral tones and subtle definition. Keep the person's face shape, hair, and clothing unchanged, maintaining the original photo quality.",
-                category: .makeup
-            ))
-        }
-        
-        return presets
     }
-    
-    // MARK: - Clothing Presets
-    
-    private static func generateClothingPresets(from analysis: PhotoAnalysisVariables) -> [VisualizationPresetOption] {
-        let bestColors = analysis.bestColors
-        let avoidColors = analysis.avoidColors
-        
-        var presets: [VisualizationPresetOption] = []
-        
-        // Use best colors for clothing
-        for color in bestColors.prefix(3) {
-            presets.append(VisualizationPresetOption(
-                title: "\(color.capitalized) Top",
-                subtitle: "Matches your best colors",
-                prompt: "Change the clothing to a stylish \(color) top that flatters the person's coloring. Keep the person's face, hair, and background exactly the same, maintaining the original photo quality.",
-                category: .clothing
-            ))
-        }
-        
-        // Professional outfit
-        presets.append(VisualizationPresetOption(
-            title: "Professional Blazer",
-            subtitle: "Business casual look",
-            prompt: "Change the clothing to a professional blazer outfit suitable for business settings. Use colors that complement the person's palette. Keep the person's face, hair, and background exactly the same, maintaining the original photo quality.",
-            category: .clothing
-        ))
-        
-        // Casual outfit
-        presets.append(VisualizationPresetOption(
-            title: "Casual Chic",
-            subtitle: "Relaxed but stylish",
-            prompt: "Change the clothing to a casual but stylish outfit that's perfect for everyday wear. Use flattering colors and cuts. Keep the person's face, hair, and background exactly the same, maintaining the original photo quality.",
-            category: .clothing
-        ))
-        
-        return presets
+
+    private static func clothingOptions(
+        bestColors: [String],
+        avoidColors: [String]
+    ) -> [VisualizationPresetOption] {
+        let hero = bestColors.first ?? "muted rose"
+        let secondary = bestColors.dropFirst().first ?? "fresh sage"
+        let avoid = avoidColors.first ?? "dull gray"
+
+        let tonalHarmony = VisualizationPresetOption(
+            title: "Monochrome Harmony",
+            subtitle: "Head-to-toe \(hero) with layered textures.",
+            prompt: """
+            Swap clothing to a monochrome \(hero) set with layered textures. Keep fabric realistic with natural folds and a subtle sheen.
+            """,
+            swatchHex: "#e1b0c4"
+        )
+
+        let contrastPop = VisualizationPresetOption(
+            title: "Contrast Pop",
+            subtitle: "Add a statement \(secondary) jacket.",
+            prompt: """
+            Style a fitted base outfit in neutrals and add a \(secondary) statement layer. Maintain true-to-life fabric shadows and fit.
+            """,
+            swatchHex: "#a8dba8"
+        )
+
+        let eveningRefinement = VisualizationPresetOption(
+            title: "Evening Elevation",
+            subtitle: "Satin slip with tailored blazer.",
+            prompt: """
+            Transform the outfit into an elegant evening look with a satin slip dress and tailored blazer. Keep proportions flattering and realistic.
+            """,
+            swatchHex: "#c9b2f0"
+        )
+
+        let avoidToneFix = VisualizationPresetOption(
+            title: "Color Correction",
+            subtitle: "Remove \(avoid) cast from wardrobe.",
+            prompt: """
+            Replace any \(avoid) tones with balanced warm neutrals that complement the user's palette. Ensure lighting and shadows remain natural.
+            """,
+            swatchHex: "#f0d9b5"
+        )
+
+        return [tonalHarmony, contrastPop, eveningRefinement, avoidToneFix]
     }
-    
-    // MARK: - Accessory Presets
-    
-    private static func generateAccessoryPresets(from analysis: PhotoAnalysisVariables) -> [VisualizationPresetOption] {
-        let bestColors = analysis.bestColors
-        let makeupStyle = analysis.makeupStyle.lowercased()
-        
-        var presets: [VisualizationPresetOption] = []
-        
-        // Statement jewelry
-        if makeupStyle.contains("glam") || makeupStyle.contains("dramatic") {
-            presets.append(VisualizationPresetOption(
-                title: "Statement Earrings",
-                subtitle: "Bold and glamorous",
-                prompt: "Add bold statement earrings that complement the glamorous look. Keep the person's face, hair, and clothing unchanged, maintaining the original photo quality.",
-                category: .accessories
-            ))
-        }
-        
-        // Delicate jewelry for natural looks
-        if makeupStyle.contains("natural") || makeupStyle.contains("minimal") {
-            presets.append(VisualizationPresetOption(
-                title: "Delicate Necklace",
-                subtitle: "Subtle and elegant",
-                prompt: "Add a delicate, elegant necklace that enhances without overwhelming. Keep the person's face, hair, and clothing unchanged, maintaining the original photo quality.",
-                category: .accessories
-            ))
-        }
-        
-        // Color-coordinated accessories
-        for color in bestColors.prefix(2) {
-            presets.append(VisualizationPresetOption(
-                title: "\(color.capitalized) Scarf",
-                subtitle: "Matches your palette",
-                prompt: "Add a stylish \(color) scarf that complements the person's color palette. Keep the person's face, hair, and other clothing unchanged, maintaining the original photo quality.",
-                category: .accessories
-            ))
-        }
-        
-        // Classic accessories
-        presets.append(VisualizationPresetOption(
-            title: "Classic Watch",
-            subtitle: "Timeless elegance",
-            prompt: "Add a classic, elegant watch that adds sophistication to the look. Keep the person's face, hair, and clothing unchanged, maintaining the original photo quality.",
-            category: .accessories
-        ))
-        
-        return presets
+
+    private static func accessoryOptions(accessoryBalance: Double) -> [VisualizationPresetOption] {
+        let needsMore = accessoryBalance < 5
+
+        let faceFramingJewelry = VisualizationPresetOption(
+            title: "Face-Framing Jewelry",
+            subtitle: "Add earrings that echo jawline angles.",
+            prompt: """
+            Introduce statement earrings that echo the face shape while staying proportional. Keep metal finish realistic and lighting consistent.
+            """
+        )
+
+        let luxeLayering = VisualizationPresetOption(
+            title: "Layered Neckline",
+            subtitle: "Delicate layers highlighting the collarbone.",
+            prompt: """
+            Add layered necklaces with mixed textures that rest naturally across the collarbone. Maintain skin texture and avoid over-sharpening.
+            """
+        )
+
+        let refinedHeadband = VisualizationPresetOption(
+            title: "Sleek Headband",
+            subtitle: "Polish the hairline with a satin band.",
+            prompt: """
+            Place a slim satin headband that matches the outfit palette, smoothing flyaways while retaining natural volume.
+            """
+        )
+
+        let minimalistReset = VisualizationPresetOption(
+            title: "Clean Minimalism",
+            subtitle: "Tone down accessories for editorial focus.",
+            prompt: """
+            Remove busy accessories and leave a minimal, polished look with subtle sheen. Focus on highlighting facial architecture.
+            """
+        )
+
+        return needsMore ? [faceFramingJewelry, luxeLayering, refinedHeadband, minimalistReset]
+            : [minimalistReset, faceFramingJewelry, luxeLayering, refinedHeadband]
     }
-    
-    // MARK: - Style Variation Presets
-    
-    private static func generateStyleVariationPresets(from analysis: PhotoAnalysisVariables) -> [VisualizationPresetOption] {
-        var presets: [VisualizationPresetOption] = []
-        
-        // Lighting variations
-        presets.append(VisualizationPresetOption(
-            title: "Golden Hour",
-            subtitle: "Warm, flattering light",
-            prompt: "Transform the lighting to golden hour with warm, flattering light that creates a natural glow. Keep the person's face, features, and clothing exactly the same, only changing the lighting.",
-            category: .styleVariations
-        ))
-        
-        presets.append(VisualizationPresetOption(
-            title: "Studio Lighting",
-            subtitle: "Professional portrait look",
-            prompt: "Transform the lighting to professional studio lighting that creates even, flattering illumination. Keep the person's face, features, and clothing exactly the same, only changing the lighting.",
-            category: .styleVariations
-        ))
-        
-        // Style variations
-        presets.append(VisualizationPresetOption(
-            title: "Vintage Style",
-            subtitle: "Classic, timeless look",
-            prompt: "Transform the overall style to a vintage, timeless aesthetic while keeping the person's features and face shape unchanged. Apply vintage-inspired makeup and styling.",
-            category: .styleVariations
-        ))
-        
-        presets.append(VisualizationPresetOption(
-            title: "Modern Minimalist",
-            subtitle: "Clean, contemporary look",
-            prompt: "Transform the overall style to modern minimalist aesthetic with clean lines and contemporary styling. Keep the person's features and face shape unchanged.",
-            category: .styleVariations
-        ))
-        
-        return presets
+
+    private static func finishingOptions(
+        lightingType: String?,
+        compositionFeedback: String?
+    ) -> [VisualizationPresetOption] {
+        let lighting = lightingType ?? "soft daylight"
+
+        let editorialMatte = VisualizationPresetOption(
+            title: "Editorial Matte",
+            subtitle: "Tame shine but keep skin real.",
+            prompt: """
+            Apply a lightweight mattifying veil while preserving skin texture. Balance highlights on the nose, forehead, and chin to look camera-ready.
+            """
+        )
+
+        let glowBoost = VisualizationPresetOption(
+            title: "Glow Boost",
+            subtitle: "Simulate \(lighting) bounce light.",
+            prompt: """
+            Enhance lighting to mimic \(lighting) with gentle rim light on the cheeks and hair. Increase vibrancy without flattening contrast.
+            """
+        )
+
+        let cinematicCrop = VisualizationPresetOption(
+            title: "Cinematic Crop",
+            subtitle: "Refine composition & depth.",
+            prompt: """
+            Adjust framing to improve composition based on: \(compositionFeedback ?? "Center the subject gracefully with breathing space."). Add subtle depth-of-field blur to background only.
+            """
+        )
+
+        let skinSmoothing = VisualizationPresetOption(
+            title: "Texture Tidy",
+            subtitle: "Diffuse texture, keep pores present.",
+            prompt: """
+            Smooth uneven texture while keeping pores visible and realistic. Avoid plastic sheen; maintain natural expressions and fine lines.
+            """
+        )
+
+        return [glowBoost, editorialMatte, skinSmoothing, cinematicCrop]
     }
 }
