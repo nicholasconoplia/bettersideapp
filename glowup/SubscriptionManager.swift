@@ -28,7 +28,7 @@ enum SubscriptionError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .productUnavailable:
-            return "The BetterSide subscription is currently unavailable."
+            return "The GlowUp subscription is currently unavailable."
         case .failedVerification:
             return "We could not verify the purchase. Please try again."
         }
@@ -58,6 +58,8 @@ final class SubscriptionManager: ObservableObject {
         self.delegate = delegate
     }
 
+    // MARK: - Product Loading
+
     func refreshProductsIfNeeded() async {
         guard products.isEmpty else { return }
         await refreshProducts()
@@ -81,20 +83,23 @@ final class SubscriptionManager: ObservableObject {
         isLoading = false
     }
 
+    // MARK: - Entitlements
+
     func refreshEntitlementState() async {
         for product in GlowUpProduct.allCases {
-            if let entitlement = await Transaction.currentEntitlement(for: product.rawValue) {
-                switch entitlement {
-                case .verified(let transaction) where transaction.revocationDate == nil:
-                    isSubscribed = true
-                    return
-                default:
-                    continue
-                }
+            if let entitlement = await Transaction.currentEntitlement(for: product.rawValue),
+               case .verified(let transaction) = entitlement,
+               transaction.revocationDate == nil {
+                isSubscribed = true
+                print("✅ Active entitlement:", product.rawValue)
+                return
             }
         }
         isSubscribed = false
+        print("⚠️ No active entitlements found.")
     }
+
+    // MARK: - Purchase
 
     func purchaseSubscription(for productID: GlowUpProduct) async throws {
         var product = products[productID]
@@ -122,6 +127,8 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
+    // MARK: - Transaction Updates
+
     private func listenForTransactions() async {
         for await update in Transaction.updates {
             guard case .verified(let transaction) = update else { continue }
@@ -138,10 +145,41 @@ final class SubscriptionManager: ObservableObject {
         isSubscribed = transaction.productType == .autoRenewable
     }
 
-    func restorePurchases() async throws {
+    // MARK: - Restore Purchases
+
+    func restorePurchases() async {
         isLoading = true
         defer { isLoading = false }
-        try await AppStore.sync()
-        await refreshEntitlementState()
+
+        do {
+            try await AppStore.sync()
+
+            // Wait briefly for StoreKit to update its local cache
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+
+            var restoredProducts: [String] = []
+
+            // Fetch all current entitlements
+            for await result in Transaction.currentEntitlements {
+                if case .verified(let transaction) = result {
+                    print("✅ Restored:", transaction.productID, "Env:", transaction.environment)
+                    restoredProducts.append(transaction.productID)
+                }
+            }
+
+            if restoredProducts.isEmpty {
+                print("No purchases found for restore.")
+                statusMessage = "No previous purchases found for this account."
+            } else {
+                print("Restored \(restoredProducts.count) product(s):", restoredProducts)
+                statusMessage = "Your purchases have been successfully restored!"
+            }
+
+            await refreshEntitlementState()
+
+        } catch {
+            print("Restore failed:", error.localizedDescription)
+            statusMessage = "Restore failed: \(error.localizedDescription)"
+        }
     }
 }

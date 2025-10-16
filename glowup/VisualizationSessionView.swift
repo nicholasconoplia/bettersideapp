@@ -17,6 +17,7 @@ struct VisualizationSessionView: View {
     @State private var selectedCategory: VisualizationPresetCategory?
     @State private var selectedEditID: UUID?
     @State private var showLikeDialog = false
+    @State private var showLikeSheet = false   // ✅ Added for iPad fix
     @State private var showSavedAlert = false
 
     private var activePresets: [VisualizationPreset] {
@@ -70,6 +71,28 @@ struct VisualizationSessionView: View {
                 Text("Saved to Notes for later.")
             }
         })
+        // ✅ Added simple iPad-safe sheet
+        .sheet(isPresented: $showLikeSheet) {
+            VStack(spacing: 20) {
+                Text("Who is this look for?")
+                    .font(.headline)
+                ForEach(VisualizationLookCategory.allCases, id: \.self) { category in
+                    Button(category.displayName) {
+                        Task {
+                            await viewModel.saveLikedLook(as: category)
+                            showLikeSheet = false
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    showLikeSheet = false
+                }
+            }
+            .padding()
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+
         .confirmationDialog(
             "Who is this look for?",
             isPresented: $showLikeDialog,
@@ -125,7 +148,15 @@ struct VisualizationSessionView: View {
     private func likeLookButton(session: VisualizationSession) -> some View {
         let canSave = !session.sortedEdits.isEmpty
         return Button {
+            #if os(iOS)
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                showLikeSheet = true   // ✅ On iPad, use sheet
+            } else {
+                showLikeDialog = true  // ✅ On iPhone, use dialog
+            }
+            #else
             showLikeDialog = true
+            #endif
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "heart.fill")
@@ -249,33 +280,33 @@ struct VisualizationSessionView: View {
                                 selectedEditID = nil
                             }
                         )
-                }
+                    }
 
-                ForEach(session.sortedEdits, id: \.objectID) { edit in
-                    if let image = edit.resultUIImage {
-                        EditThumbnail(
-                            image: image,
-                            isActive: selectedEditID == edit.id,
-                            tapAction: {
-                                viewModel.restoreEdit(edit)
-                                selectedEditID = edit.id
-                            }
-                        )
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                viewModel.deleteEdit(edit)
-                                if selectedEditID == edit.id {
-                                    selectedEditID = viewModel.activeSession?.sortedEdits.last?.id
+                    ForEach(session.sortedEdits, id: \.objectID) { edit in
+                        if let image = edit.resultUIImage {
+                            EditThumbnail(
+                                image: image,
+                                isActive: selectedEditID == edit.id,
+                                tapAction: {
+                                    viewModel.restoreEdit(edit)
+                                    selectedEditID = edit.id
                                 }
-                            } label: {
-                                Label("Delete Edit", systemImage: "trash")
+                            )
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    viewModel.deleteEdit(edit)
+                                    if selectedEditID == edit.id {
+                                        selectedEditID = viewModel.activeSession?.sortedEdits.last?.id
+                                    }
+                                } label: {
+                                    Label("Delete Edit", systemImage: "trash")
+                                }
                             }
                         }
                     }
                 }
+                .padding(.vertical, 6)
             }
-            .padding(.vertical, 6)
-        }
         }
     }
 
