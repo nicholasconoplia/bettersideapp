@@ -4,3 +4,6 @@ glowup/Secrets.swift.local
 
 # Xcode user data
 *.xcuserdata/
+glowup/Secrets.swift
+test_openai_key.sh
+GPT4_VISION_MIGRATION.md
