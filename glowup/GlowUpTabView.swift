@@ -14,10 +14,13 @@ enum GlowTab: Hashable {
     case home
     case coach
     case results
+    case visualize
+    case notes
 }
 
 struct GlowUpTabView: View {
     @State private var selection: GlowTab = .home
+    @StateObject private var visualizationViewModel = VisualizationViewModel()
 
     init() {
         customizeTabBarAppearance()
@@ -40,11 +43,26 @@ struct GlowUpTabView: View {
                     }
                     .tag(GlowTab.coach)
 
-                ResultsView()
+                ResultsView(selection: $selection)
+                    .environmentObject(visualizationViewModel)
                     .tabItem {
                         Label("Results", systemImage: "clock.fill")
                     }
                     .tag(GlowTab.results)
+
+                VisualizeView()
+                    .environmentObject(visualizationViewModel)
+                    .tabItem {
+                        Label("Visualize", systemImage: "wand.and.stars.inverse")
+                    }
+                    .tag(GlowTab.visualize)
+
+                NotesView()
+                    .environmentObject(visualizationViewModel)
+                    .tabItem {
+                        Label("Notes", systemImage: "note.text")
+                    }
+                    .tag(GlowTab.notes)
             }
             .tint(.white)
         }

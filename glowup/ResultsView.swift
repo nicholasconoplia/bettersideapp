@@ -10,7 +10,9 @@ import CoreData
 import UIKit
 
 struct ResultsView: View {
+    @Binding var selection: GlowTab
     @Environment(\.managedObjectContext) private var viewContext
+    @EnvironmentObject private var visualizationViewModel: VisualizationViewModel
 
     @FetchRequest(
         entity: PhotoSession.entity(),
@@ -20,6 +22,10 @@ struct ResultsView: View {
 
     @State private var expandedSessions: Set<NSManagedObjectID> = []
     @State private var showClearConfirmation = false
+
+    init(selection: Binding<GlowTab>) {
+        _selection = selection
+    }
 
     var body: some View {
         NavigationStack {
@@ -105,6 +111,7 @@ struct ResultsView: View {
                         RoundedRectangle(cornerRadius: 26, style: .continuous)
                             .stroke(Color.white.opacity(0.06), lineWidth: 1)
                     )
+                    visualizeButton(for: session)
                 } else {
                     missingAnalysisSection
                 }
@@ -250,6 +257,31 @@ struct ResultsView: View {
         formatter.timeStyle = .short
         return formatter
     }()
+
+    private func visualizeButton(for session: PhotoSession) -> some View {
+        Button {
+            visualizeSession(session)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "wand.and.stars")
+                    .font(.headline.weight(.semibold))
+                Text("Visualize This Look")
+                    .font(.headline.weight(.semibold))
+            }
+            .foregroundStyle(.white)
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Color.white.opacity(0.14))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 8)
+    }
+
+    private func visualizeSession(_ session: PhotoSession) {
+        visualizationViewModel.prepareLaunch(from: session)
+        selection = .visualize
+    }
 
     private func clearAllHistory() {
         withAnimation {

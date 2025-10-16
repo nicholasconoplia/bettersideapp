@@ -38,6 +38,35 @@
         <attribute name="sessionType" optional="YES" attributeType="String"/>
         <attribute name="startTime" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
     </entity>
+    <entity name="VisualizationEdit" representedClassName="VisualizationEdit" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isPreset" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="presetCategory" optional="YES" attributeType="String"/>
+        <attribute name="prompt" optional="NO" attributeType="String"/>
+        <attribute name="resultImage" optional="NO" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="timestamp" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="session" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="VisualizationSession" inverseName="edits" inverseEntity="VisualizationSession"/>
+    </entity>
+    <entity name="VisualizationSession" representedClassName="VisualizationSession" syncable="YES" codeGenerationType="class">
+        <attribute name="analysisReference" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="baseImage" optional="NO" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <relationship name="edits" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="VisualizationEdit" inverseName="session" inverseEntity="VisualizationEdit"/>
+        <relationship name="notes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="VisualizationNote" inverseName="session" inverseEntity="VisualizationNote"/>
+    </entity>
+    <entity name="VisualizationNote" representedClassName="VisualizationNote" syncable="YES" codeGenerationType="class">
+        <attribute name="category" optional="NO" attributeType="String"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="detail" optional="NO" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="image" optional="NO" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="keywords" optional="YES" attributeType="String"/>
+        <attribute name="prompt" optional="YES" attributeType="String"/>
+        <attribute name="summary" optional="NO" attributeType="String"/>
+        <attribute name="targetProfessional" optional="NO" attributeType="String"/>
+        <relationship name="session" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="VisualizationSession" inverseName="notes" inverseEntity="VisualizationSession"/>
+    </entity>
     <entity name="TipEntry" representedClassName="TipEntry" syncable="YES" codeGenerationType="class">
         <attribute name="body" optional="NO" attributeType="String"/>
         <attribute name="completed" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
@@ -62,5 +91,8 @@
         <element name="DailyStreak" positionX="107" positionY="174" width="128" height="118"/>
         <element name="TipEntry" positionX="277" positionY="174" width="128" height="178"/>
         <element name="ConversationEntry" positionX="447" positionY="174" width="128" height="118"/>
+        <element name="VisualizationSession" positionX="617" positionY="-18" width="128" height="148"/>
+        <element name="VisualizationEdit" positionX="617" positionY="174" width="128" height="178"/>
+        <element name="VisualizationNote" positionX="787" positionY="-18" width="128" height="178"/>
     </elements>
 </model>
