@@ -24,6 +24,7 @@ enum GlowUpProduct: String, CaseIterable {
 enum SubscriptionError: Error, LocalizedError {
     case productUnavailable
     case failedVerification
+    case restoreFailed(String)
 
     var errorDescription: String? {
         switch self {
@@ -31,8 +32,15 @@ enum SubscriptionError: Error, LocalizedError {
             return "The GlowUp subscription is currently unavailable."
         case .failedVerification:
             return "We could not verify the purchase. Please try again."
+        case .restoreFailed(let message):
+            return message
         }
     }
+}
+
+enum RestorePurchasesResult {
+    case restored(count: Int)
+    case nothingFound
 }
 
 @MainActor
@@ -147,39 +155,38 @@ final class SubscriptionManager: ObservableObject {
 
     // MARK: - Restore Purchases
 
-    func restorePurchases() async {
-        isLoading = true
-        defer { isLoading = false }
-
+    func restorePurchases() async throws -> RestorePurchasesResult {
         do {
             try await AppStore.sync()
-
-            // Wait briefly for StoreKit to update its local cache
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-
-            var restoredProducts: [String] = []
-
-            // Fetch all current entitlements
-            for await result in Transaction.currentEntitlements {
-                if case .verified(let transaction) = result {
-                    print("✅ Restored:", transaction.productID, "Env:", transaction.environment)
-                    restoredProducts.append(transaction.productID)
-                }
-            }
-
-            if restoredProducts.isEmpty {
-                print("No purchases found for restore.")
-                statusMessage = "No previous purchases found for this account."
-            } else {
-                print("Restored \(restoredProducts.count) product(s):", restoredProducts)
-                statusMessage = "Your purchases have been successfully restored!"
-            }
-
-            await refreshEntitlementState()
-
         } catch {
-            print("Restore failed:", error.localizedDescription)
-            statusMessage = "Restore failed: \(error.localizedDescription)"
+            let message = "Restore failed: \(error.localizedDescription)"
+            statusMessage = message
+            throw SubscriptionError.restoreFailed(message)
+        }
+
+        // Wait briefly for StoreKit to update its local cache
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+
+        var restoredProducts: [String] = []
+
+        // Fetch all current entitlements
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let transaction) = result {
+                print("✅ Restored:", transaction.productID, "Env:", transaction.environment)
+                restoredProducts.append(transaction.productID)
+            }
+        }
+
+        await refreshEntitlementState()
+
+        if restoredProducts.isEmpty {
+            print("No purchases found for restore.")
+            statusMessage = "No previous purchases were found on this Apple ID."
+            return .nothingFound
+        } else {
+            print("Restored \(restoredProducts.count) product(s):", restoredProducts)
+            statusMessage = "You're all set—your purchases have been restored."
+            return .restored(count: restoredProducts.count)
         }
     }
 }

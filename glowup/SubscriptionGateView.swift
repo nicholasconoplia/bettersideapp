@@ -335,31 +335,48 @@ struct SubscriptionGateView: View {
     }
 
     private var restoreButton: some View {
-        Button {
-            guard !isLoading, !isRestoring else { return }
-            isRestoring = true
-            errorMessage = nil
-            Task {
-                do {
-                    try await subscriptionManager.restorePurchases()
-                } catch {
-                    errorMessage = error.localizedDescription
+        VStack(spacing: 6) {
+            Button {
+                guard !isLoading, !isRestoring else { return }
+                isRestoring = true
+                errorMessage = nil
+                Task {
+                    do {
+                        _ = try await subscriptionManager.restorePurchases()
+                        await MainActor.run {
+                            errorMessage = nil
+                        }
+                    } catch {
+                        await MainActor.run {
+                            errorMessage = error.localizedDescription
+                        }
+                    }
+                    await MainActor.run {
+                        isRestoring = false
+                    }
                 }
-                isRestoring = false
-            }
-        } label: {
-            HStack(spacing: 6) {
-                if isRestoring {
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .tint(.white)
+            } label: {
+                HStack(spacing: 6) {
+                    if isRestoring {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(.white)
+                    }
+                    Text("Restore Purchase")
+                        .font(.footnote.weight(.medium))
+                        .underline()
                 }
-                Text("Restore Purchase")
-                    .font(.footnote.weight(.medium))
-                    .underline()
+                .padding(.top, 4)
+                .foregroundStyle(.white.opacity(0.9))
             }
-            .padding(.top, 4)
-            .foregroundStyle(.white.opacity(0.9))
+
+            if let status = subscriptionManager.statusMessage {
+                Text(status)
+                    .font(.caption.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .padding(.top, 2)
+            }
         }
         .padding(.horizontal, 20)
     }

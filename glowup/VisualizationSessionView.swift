@@ -107,6 +107,10 @@ struct VisualizationSessionView: View {
             }
             Button("Cancel", role: .cancel) { }
         }
+        .background(GradientBackground.primary.ignoresSafeArea())
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(GradientBackground.primary, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
     }
 
     private func content(for session: VisualizationSession, displayImage: UIImage) -> some View {

@@ -102,6 +102,9 @@ struct VisualizeView: View {
                 route = nil
             }
         }
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(GradientBackground.primary, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
     }
 
     private var sessionList: some View {

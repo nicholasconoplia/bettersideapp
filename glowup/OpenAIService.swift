@@ -32,78 +32,78 @@ struct PhotoAnalysisInput {
 
 struct PhotoAnalysisVariables: Codable {
     // Physical Features (nullable if AI can't detect)
-    let faceShape: String?
-    let skinUndertone: String?
-    let eyeColor: String?
-    let hairColor: String?
+    var faceShape: String?
+    var skinUndertone: String?
+    var eyeColor: String?
+    var hairColor: String?
     
     // Facial Structure & Harmony
-    let facialHarmonyScore: Double     // 0-10
-    let featureBalanceDescription: String
-    let genderDimorphism: String       // "Feminine", "Masculine", "Androgynous", etc.
-    let facialAngularityScore: Double  // 0-10 (higher means sharper angles)
-    let faceFullnessDescriptor: String // "Lean", "Balanced", "Soft", etc.
+    var facialHarmonyScore: Double     // 0-10
+    var featureBalanceDescription: String
+    var genderDimorphism: String       // "Feminine", "Masculine", "Androgynous", etc.
+    var facialAngularityScore: Double  // 0-10 (higher means sharper angles)
+    var faceFullnessDescriptor: String // "Lean", "Balanced", "Soft", etc.
 
     // Technical Photo Quality
-    let lightingQuality: Double        // 0-10
-    let lightingType: String           // "Natural", "Artificial", "Mixed", "Golden Hour"
-    let lightingDirection: String      // "Front", "Side", "Backlit", "Overhead"
-    let exposure: String               // "Underexposed", "Perfect", "Overexposed"
+    var lightingQuality: Double        // 0-10
+    var lightingType: String           // "Natural", "Artificial", "Mixed", "Golden Hour"
+    var lightingDirection: String      // "Front", "Side", "Backlit", "Overhead"
+    var exposure: String               // "Underexposed", "Perfect", "Overexposed"
     
     // Aesthetic Harmony
-    let colorHarmony: Double           // 0-10
-    let overallComposition: Double     // 0-10
-    let backgroundSuitability: Double  // 0-10
+    var colorHarmony: Double           // 0-10
+    var overallComposition: Double     // 0-10
+    var backgroundSuitability: Double  // 0-10
     
     // Style & Presentation
-    let makeupSuitability: Double      // 0-10 (0 if no makeup)
-    let makeupStyle: String            // "Natural", "Glam", "Dramatic", "None"
-    let outfitColorMatch: Double       // 0-10
-    let accessoryBalance: Double       // 0-10
+    var makeupSuitability: Double      // 0-10 (0 if no makeup)
+    var makeupStyle: String            // "Natural", "Glam", "Dramatic", "None"
+    var outfitColorMatch: Double       // 0-10
+    var accessoryBalance: Double       // 0-10
     
     // Skin & Texture
-    let skinTextureScore: Double       // 0-10
-    let skinTextureDescription: String
-    let skinConcernHighlights: [String]
+    var skinTextureScore: Double       // 0-10
+    var skinTextureDescription: String
+    var skinConcernHighlights: [String]
     
     // Brows & Framing
-    let eyebrowDensityScore: Double    // 0-10
-    let eyebrowFeedback: String
+    var eyebrowDensityScore: Double    // 0-10
+    var eyebrowFeedback: String
 
     // Posing & Expression
-    let poseNaturalness: Double        // 0-10
-    let angleFlatter: Double           // 0-10
-    let facialExpression: String       // "Confident", "Natural", "Forced", "Relaxed"
-    let eyeContact: String             // "Direct", "Averted", "Soft", "Intense"
+    var poseNaturalness: Double        // 0-10
+    var angleFlatter: Double           // 0-10
+    var facialExpression: String       // "Confident", "Natural", "Forced", "Relaxed"
+    var eyeContact: String             // "Direct", "Averted", "Soft", "Intense"
     
     // Color Analysis (nullable if unclear)
-    let seasonalPalette: String?       // "Spring", "Summer", "Autumn", "Winter"
-    let bestColors: [String]           // Recommended color palette
-    let avoidColors: [String]          // Colors to avoid
+    var seasonalPalette: String?       // "Spring", "Summer", "Autumn", "Winter"
+    var bestColors: [String]           // Recommended color palette
+    var avoidColors: [String]          // Colors to avoid
     
     // Confidence & Presence
-    let confidenceScore: Double        // 0-10
-    let overallGlowScore: Double       // 0-10
+    var confidenceScore: Double        // 0-10
+    var overallGlowScore: Double       // 0-10
     
     // Personalized Recommendations
-    let strengthAreas: [String]        // What's working well
-    let improvementAreas: [String]     // What needs work
-    let bestTraits: [String]           // Explicit best traits breakdown
-    let traitsToImprove: [String]      // Traits needing refinement (soft max focus)
-    let holdingBackFactors: [String]   // Key blockers holding the user back
-    let roadmap: [ImprovementRoadmapStep]
-    let quickWins: [String]            // Easy immediate improvements
-    let longTermGoals: [String]        // Strategic improvements
-    let foundationalHabits: [String]   // Tailored zero-cost lifestyle resets
+    var strengthAreas: [String]        // What's working well
+    var improvementAreas: [String]     // What needs work
+    var bestTraits: [String]           // Explicit best traits breakdown
+    var traitsToImprove: [String]      // Traits needing refinement (soft max focus)
+    var holdingBackFactors: [String]   // Key blockers holding the user back
+    var roadmap: [ImprovementRoadmapStep]
+    var quickWins: [String]            // Easy immediate improvements
+    var longTermGoals: [String]        // Strategic improvements
+    var foundationalHabits: [String]   // Tailored zero-cost lifestyle resets
     
     // AI-Generated Feedback Sections (nullable if detection failed)
-    let lightingFeedback: String
-    let eyeColorFeedback: String?
-    let skinToneFeedback: String?
-    let hairColorFeedback: String?
-    let poseFeedback: String
-    let makeupFeedback: String
-    let compositionFeedback: String
+    var lightingFeedback: String
+    var eyeColorFeedback: String?
+    var skinToneFeedback: String?
+    var hairColorFeedback: String?
+    var poseFeedback: String
+    var makeupFeedback: String
+    var compositionFeedback: String
 }
 
 struct DetailedPhotoAnalysis: Codable {

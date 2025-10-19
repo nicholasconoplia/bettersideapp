@@ -50,6 +50,9 @@ struct NotesView: View {
                 }
             }
         }
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(GradientBackground.primary, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
     }
 
     private func fetchNote(with id: NSManagedObjectID) -> VisualizationNote? {

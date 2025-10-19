@@ -20,6 +20,29 @@ actor FaceOverlayService {
         let faceShape: String
         let faceBounds: CGRect
         let landmarks: VNFaceLandmarks2D?
+        let classification: FaceShapeClassification
+        let orientation: FaceOrientationEstimate
+    }
+
+    struct FaceShapeClassification {
+        let label: String
+        let confidence: Double
+        let metrics: FaceProportionMetrics
+    }
+
+    struct FaceProportionMetrics {
+        let aspectRatio: Double
+        let foreheadWidth: Double
+        let cheekboneWidth: Double
+        let jawWidth: Double
+        let jawAngle: Double
+    }
+
+    struct FaceOrientationEstimate {
+        let yawDegrees: Double?
+        let rollDegrees: Double?
+        let pitchDegrees: Double?
+        let symmetryScore: Double
     }
     
     // MARK: - Main Analysis Method
@@ -39,20 +62,24 @@ actor FaceOverlayService {
         }
         
         // Determine face shape from landmarks
-        let faceShape = determineFaceShape(from: face)
+        let classification = determineFaceShape(from: face)
+        let faceShape = classification.label
+        let orientation = orientationEstimate(for: face)
         
         // Create annotated image
         let annotatedImage = drawFaceOverlay(
             on: image,
             faceObservation: face,
-            faceShape: faceShape
+            classification: classification
         )
         
         return FaceAnalysisResult(
             annotatedImage: annotatedImage,
             faceShape: faceShape,
             faceBounds: face.boundingBox,
-            landmarks: face.landmarks
+            landmarks: face.landmarks,
+            classification: classification,
+            orientation: orientation
         )
     }
     
@@ -99,77 +126,189 @@ actor FaceOverlayService {
     
     // MARK: - Face Shape Determination
     
-    private func determineFaceShape(from observation: VNFaceObservation) -> String {
-        guard let landmarks = observation.landmarks else {
-            return "Oval"
+    private func determineFaceShape(from observation: VNFaceObservation) -> FaceShapeClassification {
+        let aspectRatio = Double(observation.boundingBox.height / observation.boundingBox.width)
+        
+        guard let contour = observation.landmarks?.faceContour?.normalizedPoints, contour.count > 10 else {
+            let fallbackMetrics = FaceProportionMetrics(
+                aspectRatio: aspectRatio,
+                foreheadWidth: 1.0,
+                cheekboneWidth: 1.02,
+                jawWidth: 0.94,
+                jawAngle: aspectRatio > 1.3 ? 36 : 32
+            )
+            return FaceShapeClassification(
+                label: fallbackShape(for: aspectRatio),
+                confidence: 0.35,
+                metrics: fallbackMetrics
+            )
         }
         
-        let boundingBox = observation.boundingBox
-        let width = boundingBox.width
-        let height = boundingBox.height
-        let ratio = height / width // >1 taller than wide
+        let rawJawWidth = Double(calculateJawWidth(from: contour))
+        let rawForeheadWidth = Double(calculateForeheadWidth(from: contour))
+        let rawCheekboneWidth = Double(calculateCheekboneWidth(from: contour))
+        let jawAngle = Double(estimateJawAngle(from: contour))
         
-        // Get jawline points if available
-        if let faceContour = landmarks.faceContour?.normalizedPoints {
-            let jawWidth = calculateJawWidth(from: faceContour)
-            let foreheadWidth = calculateForeheadWidth(from: faceContour)
-            let cheekboneWidth = calculateCheekboneWidth(from: faceContour)
-            let jawAngle = estimateJawAngle(from: faceContour)
-            
-            // Normalize widths relative to overall width
-            let widthNorm = max(foreheadWidth, max(cheekboneWidth, jawWidth))
-            let f = foreheadWidth / widthNorm
-            let c = cheekboneWidth / widthNorm
-            let j = jawWidth / widthNorm
-            
-            // Rules based on anthropometric heuristics
-            // Oblong/Rectangular: significantly taller than wide
-            if ratio >= 1.6 {
-                return "Rectangular/Oblong"
-            }
-            
-            // Diamond: cheekbones widest, forehead and jaw narrower, sharper jaw angle
-            if c > f + 0.08 && c > j + 0.08 && jawAngle < 35 {
-                return "Diamond"
-            }
-            
-            // Heart: forehead widest, jaw clearly narrower, often sharper chin (small jaw width and angle)
-            if f > c - 0.03 && f > j + 0.08 {
-                return "Heart"
-            }
-            
-            // Square: similar widths and strong jaw angle (near 45-60 degrees)
-            if abs(f - j) < 0.06 && abs(c - f) < 0.08 && jawAngle >= 38 {
-                return "Square"
-            }
-            
-            // Round: width ~ height (ratio ~1) and soft jaw (angle low) and widths fairly similar
-            if ratio <= 1.15 && abs(f - j) < 0.08 && abs(c - f) < 0.08 && jawAngle < 33 {
-                return "Round"
-            }
-            
-            // Oval: slightly taller than wide, cheekbones widest but not by much, softer jaw
-            if ratio > 1.15 && ratio < 1.6 && c >= f - 0.04 && c >= j - 0.04 && jawAngle < 38 {
-                return "Oval"
-            }
-            
-            // Triangle (inverted triangle vs triangle): if jaw wider than forehead
-            if j > f + 0.08 {
-                return "Triangle"
-            }
-            
-            // Default fallback based on ratio
-            return ratio > 1.3 ? "Oval" : "Round"
+        let widthNormalizer = max(rawForeheadWidth, max(rawCheekboneWidth, rawJawWidth))
+        let safeNormalizer = widthNormalizer > 0.0001 ? widthNormalizer : 1.0
+        let foreheadWidth = rawForeheadWidth / safeNormalizer
+        let cheekboneWidth = rawCheekboneWidth / safeNormalizer
+        let jawWidth = rawJawWidth / safeNormalizer
+        
+        let metrics = FaceProportionMetrics(
+            aspectRatio: aspectRatio,
+            foreheadWidth: foreheadWidth,
+            cheekboneWidth: cheekboneWidth,
+            jawWidth: jawWidth,
+            jawAngle: jawAngle
+        )
+        
+        var candidates: [(String, Double)] = []
+        candidates.append(("Round", scoreRound(metrics)))
+        candidates.append(("Oval", scoreOval(metrics)))
+        candidates.append(("Square", scoreSquare(metrics)))
+        candidates.append(("Rectangular/Oblong", scoreRectangular(metrics)))
+        candidates.append(("Diamond", scoreDiamond(metrics)))
+        candidates.append(("Heart", scoreHeart(metrics)))
+        candidates.append(("Triangle", scoreTriangle(metrics)))
+        
+        let bestMatch = candidates.max { $0.1 < $1.1 } ?? ("Oval", 0.35)
+        var label = bestMatch.0
+        var confidence = max(0.25, min(bestMatch.1, 0.95))
+        
+        if label == "Rectangular/Oblong", metrics.aspectRatio < 1.22 {
+            label = metrics.aspectRatio > 1.1 ? "Oval" : "Round"
+            confidence = max(confidence, 0.4)
+        }
+        if label == "Triangle", (metrics.jawWidth - metrics.foreheadWidth) < 0.04 {
+            label = metrics.aspectRatio > 1.1 ? "Oval" : "Round"
+            confidence = max(0.4, confidence * 0.8)
         }
         
-        // Fallback based on basic ratios
-        if ratio > 1.5 {
-            return "Oblong"
-        } else if ratio > 1.2 {
-            return "Oval"
-        } else {
-            return "Round"
+        return FaceShapeClassification(
+            label: label,
+            confidence: confidence,
+            metrics: metrics
+        )
+    }
+
+    private func scoreRound(_ metrics: FaceProportionMetrics) -> Double {
+        let ratioScore = 1 - min(1, abs(metrics.aspectRatio - 1.05) / 0.24)
+        let jawSoftness = clamp((35.0 - metrics.jawAngle) / 10.0, 0, 1)
+        let widthBalance = 1 - min(1, (abs(metrics.foreheadWidth - metrics.jawWidth) + abs(metrics.cheekboneWidth - metrics.foreheadWidth)) / 0.22)
+        return max(0, (0.42 * ratioScore) + (0.34 * jawSoftness) + (0.24 * widthBalance))
+    }
+
+    private func scoreOval(_ metrics: FaceProportionMetrics) -> Double {
+        let ratioScore = 1 - min(1, abs(metrics.aspectRatio - 1.35) / 0.35)
+        let cheekLead = clamp((metrics.cheekboneWidth - metrics.jawWidth) / 0.12, 0, 1)
+        let jawSoftness = clamp((38.0 - metrics.jawAngle) / 12.0, 0, 1)
+        return max(0, (0.46 * ratioScore) + (0.32 * cheekLead) + (0.22 * jawSoftness))
+    }
+
+    private func scoreSquare(_ metrics: FaceProportionMetrics) -> Double {
+        let ratioScore = 1 - min(1, abs(metrics.aspectRatio - 1.05) / 0.22)
+        let jawSharpness = clamp((metrics.jawAngle - 36.0) / 12.0, 0, 1)
+        let widthParity = 1 - min(1, (abs(metrics.foreheadWidth - metrics.jawWidth) + abs(metrics.cheekboneWidth - metrics.foreheadWidth)) / 0.18)
+        return max(0, (0.36 * ratioScore) + (0.42 * jawSharpness) + (0.22 * widthParity))
+    }
+
+    private func scoreRectangular(_ metrics: FaceProportionMetrics) -> Double {
+        let ratioScore = clamp((metrics.aspectRatio - 1.25) / 0.5, 0, 1)
+        let widthParity = 1 - min(1, abs(metrics.foreheadWidth - metrics.jawWidth) / 0.18)
+        let jawTone = clamp((metrics.jawAngle - 34.0) / 10.0, 0, 1)
+        return max(0, (0.55 * ratioScore) + (0.25 * widthParity) + (0.2 * jawTone))
+    }
+
+    private func scoreDiamond(_ metrics: FaceProportionMetrics) -> Double {
+        let cheekDominance = clamp((metrics.cheekboneWidth - max(metrics.foreheadWidth, metrics.jawWidth)) / 0.1, 0, 1)
+        let jawTaper = clamp((34.0 - metrics.jawAngle) / 8.0, 0, 1)
+        let ratioScore = 1 - min(1, abs(metrics.aspectRatio - 1.3) / 0.35)
+        return max(0, (0.45 * cheekDominance) + (0.32 * jawTaper) + (0.23 * ratioScore))
+    }
+
+    private func scoreHeart(_ metrics: FaceProportionMetrics) -> Double {
+        let foreheadLead = clamp((metrics.foreheadWidth - metrics.jawWidth) / 0.1, 0, 1)
+        let chinTaper = clamp((36.0 - metrics.jawAngle) / 9.0, 0, 1)
+        let ratioScore = 1 - min(1, abs(metrics.aspectRatio - 1.35) / 0.32)
+        return max(0, (0.5 * foreheadLead) + (0.3 * chinTaper) + (0.2 * ratioScore))
+    }
+
+    private func scoreTriangle(_ metrics: FaceProportionMetrics) -> Double {
+        let jawLead = clamp((metrics.jawWidth - metrics.foreheadWidth) / 0.1, 0, 1)
+        let cheekAlignment = 1 - min(1, abs(metrics.cheekboneWidth - metrics.jawWidth) / 0.12)
+        let ratioScore = clamp((metrics.aspectRatio - 1.1) / 0.45, 0, 1)
+        return max(0, (0.48 * jawLead) + (0.28 * cheekAlignment) + (0.24 * ratioScore))
+    }
+
+    private func fallbackShape(for aspectRatio: Double) -> String {
+        if aspectRatio >= 1.55 { return "Rectangular/Oblong" }
+        if aspectRatio >= 1.25 { return "Oval" }
+        return "Round"
+    }
+
+    private func orientationEstimate(for observation: VNFaceObservation) -> FaceOrientationEstimate {
+        let yawRadians = observation.yaw?.doubleValue
+        let rollRadians = observation.roll?.doubleValue
+        let pitchRadians = observation.pitch?.doubleValue
+        
+        let yawDegrees = yawRadians.map { $0 * 180 / .pi }
+        let rollDegrees = rollRadians.map { $0 * 180 / .pi }
+        let pitchDegrees = pitchRadians.map { $0 * 180 / .pi }
+        
+        let yawBalance = yawDegrees.map { max(0, 1 - min(1, abs($0) / 24.0)) } ?? 0.86
+        let rollBalance = rollDegrees.map { max(0, 1 - min(1, abs($0) / 26.0)) } ?? 0.86
+        let landmarkSymmetry = symmetryScore(from: observation.landmarks)
+        let symmetry = max(0, min(1, (yawBalance * 0.6) + (rollBalance * 0.2) + (landmarkSymmetry * 0.2)))
+        
+        return FaceOrientationEstimate(
+            yawDegrees: yawDegrees,
+            rollDegrees: rollDegrees,
+            pitchDegrees: pitchDegrees,
+            symmetryScore: symmetry
+        )
+    }
+
+    private func symmetryScore(from landmarks: VNFaceLandmarks2D?) -> Double {
+        guard
+            let landmarks,
+            let leftEye = landmarks.leftEye,
+            let rightEye = landmarks.rightEye,
+            leftEye.pointCount > 0,
+            rightEye.pointCount > 0
+        else {
+            return 0.8
         }
+        
+        let leftCenter = centroid(of: leftEye.normalizedPoints)
+        let rightCenter = centroid(of: rightEye.normalizedPoints)
+        let mirroredRightX = 1 - rightCenter.x
+        
+        let horizontalDiff = abs(Double(leftCenter.x) - Double(mirroredRightX))
+        let verticalDiff = abs(Double(leftCenter.y) - Double(rightCenter.y))
+        
+        let horizontalScore = max(0, 1 - min(1, horizontalDiff / 0.12))
+        let verticalScore = max(0, 1 - min(1, verticalDiff / 0.12))
+        
+        var noseScore = 0.8
+        if let nose = landmarks.nose, nose.pointCount > 0 {
+            let noseCenter = centroid(of: nose.normalizedPoints)
+            noseScore = max(0, 1 - min(1, abs(Double(noseCenter.x) - 0.5) / 0.15))
+        }
+        
+        return max(0, min(1, (horizontalScore * 0.45) + (verticalScore * 0.35) + (noseScore * 0.2)))
+    }
+
+    private func centroid(of points: [CGPoint]) -> CGPoint {
+        guard !points.isEmpty else { return .zero }
+        var totalX: CGFloat = 0
+        var totalY: CGFloat = 0
+        for point in points {
+            totalX += point.x
+            totalY += point.y
+        }
+        let count = CGFloat(points.count)
+        return CGPoint(x: totalX / count, y: totalY / count)
     }
     
     private func calculateJawWidth(from points: [CGPoint]) -> CGFloat {
@@ -196,6 +335,10 @@ actor FaceOverlayService {
         let minX = midPoints.map { $0.x }.min() ?? 0
         let maxX = midPoints.map { $0.x }.max() ?? 0
         return maxX - minX
+    }
+    
+    private func clamp(_ value: Double, _ lower: Double, _ upper: Double) -> Double {
+        return min(max(value, lower), upper)
     }
     
     private func estimateJawAngle(from points: [CGPoint]) -> CGFloat {
@@ -226,7 +369,7 @@ actor FaceOverlayService {
     private func drawFaceOverlay(
         on image: UIImage,
         faceObservation: VNFaceObservation,
-        faceShape: String
+        classification: FaceShapeClassification
     ) -> UIImage {
         let imageSize = image.size
         
@@ -255,7 +398,7 @@ actor FaceOverlayService {
         // Draw face shape label
         drawFaceShapeLabel(
             in: context,
-            faceShape: faceShape,
+            classification: classification,
             boundingBox: boundingBox
         )
         
@@ -440,10 +583,17 @@ actor FaceOverlayService {
     
     private func drawFaceShapeLabel(
         in context: CGContext,
-        faceShape: String,
+        classification: FaceShapeClassification,
         boundingBox: CGRect
     ) {
-        let text = faceShape
+        let confidencePercent = Int((classification.confidence * 100).rounded())
+        let confidenceText: String
+        if confidencePercent >= 55 {
+            confidenceText = "\(classification.label) • \(confidencePercent)%"
+        } else {
+            confidenceText = "\(classification.label) • est."
+        }
+        let text = confidenceText
         let attributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.boldSystemFont(ofSize: 32),  // Larger font
             .foregroundColor: UIColor.white,
