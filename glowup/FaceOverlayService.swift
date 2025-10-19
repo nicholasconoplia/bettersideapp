@@ -22,6 +22,8 @@ actor FaceOverlayService {
         let landmarks: VNFaceLandmarks2D?
         let classification: FaceShapeClassification
         let orientation: FaceOrientationEstimate
+        let contourPoints: [CGPoint]
+        let averageLuminance: Double?
     }
 
     struct FaceShapeClassification {
@@ -72,6 +74,11 @@ actor FaceOverlayService {
             faceObservation: face,
             classification: classification
         )
+        let contourPoints = extractContourPoints(from: face)
+        let luminance = computeAverageLuminance(
+            for: image,
+            faceBounds: face.boundingBox
+        )
         
         return FaceAnalysisResult(
             annotatedImage: annotatedImage,
@@ -79,7 +86,9 @@ actor FaceOverlayService {
             faceBounds: face.boundingBox,
             landmarks: face.landmarks,
             classification: classification,
-            orientation: poseOrientation
+            orientation: poseOrientation,
+            contourPoints: contourPoints,
+            averageLuminance: luminance
         )
     }
     
@@ -122,6 +131,53 @@ actor FaceOverlayService {
             }
             return lhsArea < rhsArea
         }
+    }
+
+    private func extractContourPoints(from observation: VNFaceObservation) -> [CGPoint] {
+        guard let points = observation.landmarks?.faceContour?.normalizedPoints else {
+            return []
+        }
+        return points.map { point in
+            CGPoint(x: CGFloat(point.x), y: CGFloat(1.0 - point.y))
+        }
+    }
+    
+    private func computeAverageLuminance(for image: UIImage, faceBounds: CGRect) -> Double? {
+        guard let cgImage = image.cgImage else { return nil }
+        let imageSize = CGSize(width: cgImage.width, height: cgImage.height)
+        let sampleRect = expandedFaceRect(in: imageSize, from: faceBounds)
+        guard !sampleRect.isEmpty else { return nil }
+        let ciImage = CIImage(cgImage: cgImage)
+        guard let filter = CIFilter(name: "CIAreaAverage") else { return nil }
+        filter.setValue(ciImage, forKey: kCIInputImageKey)
+        filter.setValue(CIVector(cgRect: sampleRect), forKey: kCIInputExtentKey)
+        guard let output = filter.outputImage else { return nil }
+        var bitmap = [UInt8](repeating: 0, count: 4)
+        let context = CIContext(options: [.useSoftwareRenderer: false])
+        context.render(
+            output,
+            toBitmap: &bitmap,
+            rowBytes: 4,
+            bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+            format: .RGBA8,
+            colorSpace: CGColorSpaceCreateDeviceRGB()
+        )
+        let r = Double(bitmap[0]) / 255.0
+        let g = Double(bitmap[1]) / 255.0
+        let b = Double(bitmap[2]) / 255.0
+        return (0.2126 * r) + (0.7152 * g) + (0.0722 * b)
+    }
+    
+    private func expandedFaceRect(in imageSize: CGSize, from boundingBox: CGRect) -> CGRect {
+        let width = boundingBox.width * imageSize.width
+        let height = boundingBox.height * imageSize.height
+        let x = boundingBox.origin.x * imageSize.width
+        let y = (1.0 - boundingBox.origin.y - boundingBox.height) * imageSize.height
+        let rawRect = CGRect(x: x, y: y, width: width, height: height)
+        let expansion = CGSize(width: rawRect.width * 0.25, height: rawRect.height * 0.25)
+        let expanded = rawRect.insetBy(dx: -expansion.width, dy: -expansion.height)
+        let bounds = CGRect(origin: .zero, size: imageSize)
+        return expanded.intersection(bounds)
     }
     
     // MARK: - Face Shape Determination

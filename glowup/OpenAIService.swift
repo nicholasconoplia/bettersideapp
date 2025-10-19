@@ -14,7 +14,7 @@ import UIKit
 struct PhotoAnalysisBundle {
     let face: Data
     let skin: Data
-    let eyes: Data
+    let eyes: Data?
 }
 
 private struct VisionImageAttachment {
@@ -32,78 +32,78 @@ struct PhotoAnalysisInput {
 
 struct PhotoAnalysisVariables: Codable {
     // Physical Features (nullable if AI can't detect)
-    var faceShape: String?
-    var skinUndertone: String?
-    var eyeColor: String?
-    var hairColor: String?
+    let faceShape: String?
+    let skinUndertone: String?
+    let eyeColor: String?
+    let hairColor: String?
     
     // Facial Structure & Harmony
-    var facialHarmonyScore: Double     // 0-10
-    var featureBalanceDescription: String
-    var genderDimorphism: String       // "Feminine", "Masculine", "Androgynous", etc.
-    var facialAngularityScore: Double  // 0-10 (higher means sharper angles)
-    var faceFullnessDescriptor: String // "Lean", "Balanced", "Soft", etc.
+    let facialHarmonyScore: Double     // 0-10
+    let featureBalanceDescription: String
+    let genderDimorphism: String       // "Feminine", "Masculine", "Androgynous", etc.
+    let facialAngularityScore: Double  // 0-10 (higher means sharper angles)
+    let faceFullnessDescriptor: String // "Lean", "Balanced", "Soft", etc.
 
     // Technical Photo Quality
-    var lightingQuality: Double        // 0-10
-    var lightingType: String           // "Natural", "Artificial", "Mixed", "Golden Hour"
-    var lightingDirection: String      // "Front", "Side", "Backlit", "Overhead"
-    var exposure: String               // "Underexposed", "Perfect", "Overexposed"
+    let lightingQuality: Double        // 0-10
+    let lightingType: String           // "Natural", "Artificial", "Mixed", "Golden Hour"
+    let lightingDirection: String      // "Front", "Side", "Backlit", "Overhead"
+    let exposure: String               // "Underexposed", "Perfect", "Overexposed"
     
     // Aesthetic Harmony
-    var colorHarmony: Double           // 0-10
-    var overallComposition: Double     // 0-10
-    var backgroundSuitability: Double  // 0-10
+    let colorHarmony: Double           // 0-10
+    let overallComposition: Double     // 0-10
+    let backgroundSuitability: Double  // 0-10
     
     // Style & Presentation
-    var makeupSuitability: Double      // 0-10 (0 if no makeup)
-    var makeupStyle: String            // "Natural", "Glam", "Dramatic", "None"
-    var outfitColorMatch: Double       // 0-10
-    var accessoryBalance: Double       // 0-10
+    let makeupSuitability: Double      // 0-10 (0 if no makeup)
+    let makeupStyle: String            // "Natural", "Glam", "Dramatic", "None"
+    let outfitColorMatch: Double       // 0-10
+    let accessoryBalance: Double       // 0-10
     
     // Skin & Texture
-    var skinTextureScore: Double       // 0-10
-    var skinTextureDescription: String
-    var skinConcernHighlights: [String]
+    let skinTextureScore: Double       // 0-10
+    let skinTextureDescription: String
+    let skinConcernHighlights: [String]
     
     // Brows & Framing
-    var eyebrowDensityScore: Double    // 0-10
-    var eyebrowFeedback: String
+    let eyebrowDensityScore: Double    // 0-10
+    let eyebrowFeedback: String
 
     // Posing & Expression
-    var poseNaturalness: Double        // 0-10
-    var angleFlatter: Double           // 0-10
-    var facialExpression: String       // "Confident", "Natural", "Forced", "Relaxed"
-    var eyeContact: String             // "Direct", "Averted", "Soft", "Intense"
+    let poseNaturalness: Double        // 0-10
+    let angleFlatter: Double           // 0-10
+    let facialExpression: String       // "Confident", "Natural", "Forced", "Relaxed"
+    let eyeContact: String             // "Direct", "Averted", "Soft", "Intense"
     
     // Color Analysis (nullable if unclear)
-    var seasonalPalette: String?       // "Spring", "Summer", "Autumn", "Winter"
-    var bestColors: [String]           // Recommended color palette
-    var avoidColors: [String]          // Colors to avoid
+    let seasonalPalette: String?       // "Spring", "Summer", "Autumn", "Winter"
+    let bestColors: [String]           // Recommended color palette
+    let avoidColors: [String]          // Colors to avoid
     
     // Confidence & Presence
-    var confidenceScore: Double        // 0-10
-    var overallGlowScore: Double       // 0-10
+    let confidenceScore: Double        // 0-10
+    let overallGlowScore: Double       // 0-10
     
     // Personalized Recommendations
-    var strengthAreas: [String]        // What's working well
-    var improvementAreas: [String]     // What needs work
-    var bestTraits: [String]           // Explicit best traits breakdown
-    var traitsToImprove: [String]      // Traits needing refinement (soft max focus)
-    var holdingBackFactors: [String]   // Key blockers holding the user back
-    var roadmap: [ImprovementRoadmapStep]
-    var quickWins: [String]            // Easy immediate improvements
-    var longTermGoals: [String]        // Strategic improvements
-    var foundationalHabits: [String]   // Tailored zero-cost lifestyle resets
+    let strengthAreas: [String]        // What's working well
+    let improvementAreas: [String]     // What needs work
+    let bestTraits: [String]           // Explicit best traits breakdown
+    let traitsToImprove: [String]      // Traits needing refinement (soft max focus)
+    let holdingBackFactors: [String]   // Key blockers holding the user back
+    let roadmap: [ImprovementRoadmapStep]
+    let quickWins: [String]            // Easy immediate improvements
+    let longTermGoals: [String]        // Strategic improvements
+    let foundationalHabits: [String]   // Tailored zero-cost lifestyle resets
     
     // AI-Generated Feedback Sections (nullable if detection failed)
-    var lightingFeedback: String
-    var eyeColorFeedback: String?
-    var skinToneFeedback: String?
-    var hairColorFeedback: String?
-    var poseFeedback: String
-    var makeupFeedback: String
-    var compositionFeedback: String
+    let lightingFeedback: String
+    let eyeColorFeedback: String?
+    let skinToneFeedback: String?
+    let hairColorFeedback: String?
+    let poseFeedback: String
+    let makeupFeedback: String
+    let compositionFeedback: String
 }
 
 struct DetailedPhotoAnalysis: Codable {
@@ -255,29 +255,37 @@ actor OpenAIService {
         do {
             let faceEncoded = encodeImageData(
                 input.bundle.face,
-                maxDimension: 1024,
-                compressionQuality: 0.75
+                maxDimension: 768,
+                compressionQuality: 0.65
             )
             let skinEncoded = encodeImageData(
                 input.bundle.skin,
-                maxDimension: 768,
-                compressionQuality: 0.8
+                maxDimension: 512,
+                compressionQuality: 0.7
             )
-            let eyeEncoded = encodeImageData(
-                input.bundle.eyes,
-                maxDimension: 768,
-                compressionQuality: 0.8
-            )
-            let attachments = [
+            var attachments: [VisionImageAttachment] = [
                 VisionImageAttachment(descriptor: "Face reference portrait", base64: faceEncoded.base64),
-                VisionImageAttachment(descriptor: "Skin texture close-up", base64: skinEncoded.base64),
-                VisionImageAttachment(descriptor: "Eye detail close-up", base64: eyeEncoded.base64)
+                VisionImageAttachment(descriptor: "Skin texture close-up", base64: skinEncoded.base64)
             ]
+            var eyeEncodedBase64: String?
+            if let eyesData = input.bundle.eyes {
+                let eyeEncoded = encodeImageData(
+                    eyesData,
+                    maxDimension: 512,
+                    compressionQuality: 0.7
+                )
+                attachments.append(
+                    VisionImageAttachment(descriptor: "Eye detail close-up", base64: eyeEncoded.base64)
+                )
+                eyeEncodedBase64 = eyeEncoded.base64
+            }
             
             print("\n========== [OpenAIService] PHOTO ANALYSIS START ==========")
             print("[OpenAIService] Encoded face image size: \(faceEncoded.base64.count) characters")
             print("[OpenAIService] Encoded skin image size: \(skinEncoded.base64.count) characters")
-            print("[OpenAIService] Encoded eye image size: \(eyeEncoded.base64.count) characters")
+            if let eyeEncodedBase64 {
+                print("[OpenAIService] Encoded eye image size: \(eyeEncodedBase64.count) characters")
+            }
             
             let prompt = buildAnalysisPrompt(for: input)
             print("[OpenAIService] Prompt length: \(prompt.count) characters")
@@ -610,9 +618,15 @@ actor OpenAIService {
         }
         
         let context = contextLines.isEmpty ? "" : "\nUser Context: \(contextLines.joined(separator: ", "))"
+        let imagesDescription: String
+        if input.bundle.eyes != nil {
+            imagesDescription = "You have three images captured in this order: [Face reference portrait], [Skin texture close-up], [Eye detail close-up]. Cross-reference all attachments to judge structure, skin, and eyes."
+        } else {
+            imagesDescription = "You have two images captured in this order: [Face reference portrait] and [Skin texture close-up]. Cross-reference both attachments to judge structure, skin, and features."
+        }
         
         return """
-        You are an expert beauty and photo analysis AI. You have three images captured in this order: [Face reference portrait], [Skin texture close-up], [Eye detail close-up]. Cross-reference all attachments to judge structure, skin, and eyes. Never guess beyond the pixels.
+        You are an expert beauty and photo analysis AI. \(imagesDescription) Never guess beyond the pixels.
         \(context)
         
         Principles:

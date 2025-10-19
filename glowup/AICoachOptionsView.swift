@@ -127,7 +127,7 @@ struct AICoachOptionsView: View {
 
 private struct StructuredPhotoUploadView: View {
     enum CaptureStage: String, CaseIterable, Identifiable {
-        case face, skin, eyes
+        case face, skin
         
         var id: String { rawValue }
         
@@ -135,7 +135,6 @@ private struct StructuredPhotoUploadView: View {
             switch self {
             case .face: return "Full Face Reference"
             case .skin: return "Skin Texture Close-Up"
-            case .eyes: return "Eyes & Brows Detail"
             }
         }
         
@@ -145,8 +144,6 @@ private struct StructuredPhotoUploadView: View {
                 return "Frame your head and shoulders in bright, even lighting. Pull hair back, look straight at the camera, and keep the camera at eye level."
             case .skin:
                 return "Hold the camera 6-8 inches from a cheek or forehead area. Stay in natural light so pores and texture are visible without harsh flash."
-            case .eyes:
-                return "Capture both eyes and brows. Angle slightly downward so the camera can see your lash line and brow shape clearly."
             }
         }
         
@@ -156,8 +153,6 @@ private struct StructuredPhotoUploadView: View {
                 return "Used to score facial harmony, proportional balance, dimorphism, and facial angularity."
             case .skin:
                 return "Feeds the skin texture, clarity, and skincare roadmap recommendations."
-            case .eyes:
-                return "Informs eye color styling, brow density feedback, and makeup guidance."
             }
         }
         
@@ -165,7 +160,6 @@ private struct StructuredPhotoUploadView: View {
             switch self {
             case .face: return "person.crop.square"
             case .skin: return "circle.dashed"
-            case .eyes: return "eye.circle"
             }
         }
     }
@@ -175,11 +169,8 @@ private struct StructuredPhotoUploadView: View {
     
     @State private var facePickerItem: PhotosPickerItem?
     @State private var skinPickerItem: PhotosPickerItem?
-    @State private var eyesPickerItem: PhotosPickerItem?
-    
     @State private var faceData: Data?
     @State private var skinData: Data?
-    @State private var eyesData: Data?
     @State private var isLoadingStage: CaptureStage?
     @State private var activeCameraStage: CaptureStage?
     
@@ -218,7 +209,6 @@ private struct StructuredPhotoUploadView: View {
         }
         .task(id: facePickerItem) { await loadImage(from: facePickerItem, for: .face) }
         .task(id: skinPickerItem) { await loadImage(from: skinPickerItem, for: .skin) }
-        .task(id: eyesPickerItem) { await loadImage(from: eyesPickerItem, for: .eyes) }
     }
     
     private var introCard: some View {
@@ -226,7 +216,7 @@ private struct StructuredPhotoUploadView: View {
             Text("Soft-Max Glow Scan")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.white)
-            Text("Upload three focused shots so the AI can map facial harmony, skin health, and eye styling opportunities. Keep lighting consistent and wipe the camera lens before each capture.")
+            Text("Upload two focused shots so the AI can map facial harmony and skin health. Keep lighting consistent and wipe the camera lens before each capture.")
                 .font(.footnote)
                 .foregroundStyle(.white.opacity(0.75))
         }
@@ -351,8 +341,8 @@ private struct StructuredPhotoUploadView: View {
     private var actionButtons: some View {
         VStack(spacing: 14) {
             Button {
-                if let faceData, let skinData, let eyesData {
-                    let bundle = PhotoAnalysisBundle(face: faceData, skin: skinData, eyes: eyesData)
+                if let faceData, let skinData {
+                    let bundle = PhotoAnalysisBundle(face: faceData, skin: skinData, eyes: nil)
                     onComplete(bundle)
                     dismiss()
                 }
@@ -376,25 +366,23 @@ private struct StructuredPhotoUploadView: View {
             Button {
                 faceData = nil
                 skinData = nil
-                eyesData = nil
             } label: {
                 Text("Reset Selections")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.white.opacity(0.6))
             }
-            .disabled(faceData == nil && skinData == nil && eyesData == nil)
+            .disabled(faceData == nil && skinData == nil)
         }
     }
     
     private var isBundleReady: Bool {
-        faceData != nil && skinData != nil && eyesData != nil && isLoadingStage == nil
+        faceData != nil && skinData != nil && isLoadingStage == nil
     }
     
     private func data(for stage: CaptureStage) -> Data? {
         switch stage {
         case .face: return faceData
         case .skin: return skinData
-        case .eyes: return eyesData
         }
     }
     
@@ -410,11 +398,6 @@ private struct StructuredPhotoUploadView: View {
                 get: { skinPickerItem },
                 set: { skinPickerItem = $0 }
             )
-        case .eyes:
-            return Binding(
-                get: { eyesPickerItem },
-                set: { eyesPickerItem = $0 }
-            )
         }
     }
     
@@ -426,9 +409,6 @@ private struct StructuredPhotoUploadView: View {
         case .skin:
             skinData = nil
             skinPickerItem = nil
-        case .eyes:
-            eyesData = nil
-            eyesPickerItem = nil
         }
     }
     
@@ -442,7 +422,6 @@ private struct StructuredPhotoUploadView: View {
         switch stage {
         case .face: faceData = data
         case .skin: skinData = data
-        case .eyes: eyesData = data
         }
     }
     
@@ -472,7 +451,7 @@ private struct StructuredPhotoUploadView: View {
         switch stage {
         case .face:
             maxDimension = 1024
-        case .skin, .eyes:
+        case .skin:
             maxDimension = 768
         }
         

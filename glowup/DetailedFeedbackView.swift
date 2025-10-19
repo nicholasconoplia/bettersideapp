@@ -753,26 +753,7 @@ struct DetailedFeedbackView: View {
         if normalized.contains("tan") || normalized.contains("camel") {
             return color(205, 170, 125)
         }
-        return hashedColor(for: normalized)
-    }
-    
-    private func hashedColor(for name: String) -> Color {
-        var hash: UInt64 = 0xcbf29ce484222325
-        for scalar in name.unicodeScalars {
-            hash ^= UInt64(scalar.value)
-            hash &*= 0x100000001b3
-        }
-        let redComponent = Double((hash >> 40) & 0xFF) / 255.0
-        let greenComponent = Double((hash >> 24) & 0xFF) / 255.0
-        let blueComponent = Double((hash >> 8) & 0xFF) / 255.0
-        func adjusted(_ component: Double) -> Double {
-            return 0.28 + component * 0.6
-        }
-        return Color(
-            red: adjusted(redComponent),
-            green: adjusted(greenComponent),
-            blue: adjusted(blueComponent)
-        )
+        return Color.white.opacity(0.18)
     }
     
     private func makeupCaption(for analysis: PhotoAnalysisVariables) -> String {
