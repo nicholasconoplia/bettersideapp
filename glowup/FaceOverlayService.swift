@@ -64,7 +64,7 @@ actor FaceOverlayService {
         // Determine face shape from landmarks
         let classification = determineFaceShape(from: face)
         let faceShape = classification.label
-        let orientation = orientationEstimate(for: face)
+        let poseOrientation = orientationEstimate(for: face)
         
         // Create annotated image
         let annotatedImage = drawFaceOverlay(
@@ -79,7 +79,7 @@ actor FaceOverlayService {
             faceBounds: face.boundingBox,
             landmarks: face.landmarks,
             classification: classification,
-            orientation: orientation
+            orientation: poseOrientation
         )
     }
     
@@ -392,7 +392,7 @@ actor FaceOverlayService {
             boundingBox: boundingBox,
             faceObservation: faceObservation,
             imageSize: imageSize,
-            faceShape: faceShape
+            faceShape: classification.label
         )
         
         // Draw face shape label
