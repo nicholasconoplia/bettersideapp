@@ -184,3 +184,37 @@ struct VisualizationLaunchContext {
         self.photoSessionID = photoSessionID
     }
 }
+
+// MARK: - Inspiration Models
+
+struct InspirationReference: Codable, Identifiable {
+	let id: UUID
+	let imageData: Data
+	let category: InspirationCategory
+	let description: String?
+
+	init(id: UUID = UUID(), imageData: Data, category: InspirationCategory, description: String? = nil) {
+		self.id = id
+		self.imageData = imageData
+		self.category = category
+		self.description = description
+	}
+}
+
+enum InspirationCategory: String, CaseIterable, Codable {
+	case hairstyle = "Hairstyle"
+	case makeup = "Makeup"
+	case accessories = "Accessories"
+	case outfit = "Outfit"
+	case general = "General Inspiration"
+
+	var systemImage: String {
+		switch self {
+		case .hairstyle: return "scissors"
+		case .makeup: return "paintpalette.fill"
+		case .accessories: return "sparkles"
+		case .outfit: return "tshirt.fill"
+		case .general: return "photo.fill"
+		}
+	}
+}

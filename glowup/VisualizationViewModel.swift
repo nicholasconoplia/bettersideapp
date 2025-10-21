@@ -26,6 +26,11 @@ final class VisualizationViewModel: ObservableObject {
     @Published var customPrompt: String = ""
     @Published var isShowingPromptSheet = false
 
+    // Inspiration inputs
+    @Published var inspirationReferences: [InspirationReference] = []
+    @Published var showInspirationPicker = false
+    @Published var selectedInspirationCategory: InspirationCategory = .general
+
     private let persistenceController: PersistenceController
     private let geminiService: GeminiService
     private let openAIService: OpenAIService
@@ -280,6 +285,118 @@ final class VisualizationViewModel: ObservableObject {
             errorMessage = error.localizedDescription
         }
         #endif
+    }
+
+    // MARK: - Inspiration
+
+    func applyInspiration(_ inspirationImage: UIImage, category: InspirationCategory, description: String?) async {
+        #if canImport(UIKit)
+        guard let session = activeSession else {
+            errorMessage = "Please start a visualization session first."
+            return
+        }
+        guard let baseImage = activeImage ?? session.latestUIImage else {
+            errorMessage = "No base image available."
+            return
+        }
+        guard !isProcessing else { return }
+
+        isProcessing = true
+        activityMessage = "Blending your inspiration…"
+        defer {
+            isProcessing = false
+            activityMessage = nil
+        }
+
+        let prompt = buildInspirationPrompt(category: category, description: description)
+
+        do {
+            let result = try await geminiService.generateImageEdit(
+                baseImage: baseImage,
+                prompt: prompt,
+                referenceImages: [inspirationImage]
+            )
+
+            if let imageData = inspirationImage.jpegData(compressionQuality: 0.85) {
+                let reference = InspirationReference(
+                    imageData: imageData,
+                    category: category,
+                    description: description
+                )
+                inspirationReferences.append(reference)
+            }
+
+            try persistEdit(
+                image: result,
+                prompt: prompt,
+                isPreset: false,
+                presetCategory: nil
+            )
+            activeImage = result
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        #endif
+    }
+
+    private func buildInspirationPrompt(category: InspirationCategory, description: String?) -> String {
+        let basePrompt: String
+
+        switch category {
+        case .hairstyle:
+            basePrompt = """
+            Carefully study the hairstyle shown in the reference image. Apply this exact hairstyle to the person in the base image, matching:
+            - Hair length, texture, and volume
+            - Styling technique (waves, curls, straight, etc.)
+            - Parting and overall shape
+            - Color tone if appropriate to the person's features
+
+            Keep the person's facial features, skin tone, and identity completely unchanged. Only transform the hair.
+            """
+        case .makeup:
+            basePrompt = """
+            Analyze the makeup look in the reference image and apply it to the person in the base image. Match:
+            - Eye makeup style (liner, shadow placement, intensity)
+            - Lip color and finish
+            - Blush placement and intensity
+            - Overall makeup aesthetic
+
+            Adapt the colors to complement the person's skin tone. Keep facial structure identical.
+            """
+        case .accessories:
+            basePrompt = """
+            Add the accessories shown in the reference image (earrings, necklace, headband, etc.) to the person in the base image. 
+            - Match the style, size, and placement exactly
+            - Ensure natural lighting and shadows
+            - Keep the accessories proportional to the person's features
+
+            Do not change the person's face, hair, or clothing unless specified.
+            """
+        case .outfit:
+            basePrompt = """
+            Apply the clothing style from the reference image to the person in the base image. Match:
+            - Garment type and silhouette
+            - Colors and patterns
+            - Neckline and fit
+
+            Keep the person's pose, face, and proportions identical. Only change the clothing.
+            """
+        case .general:
+            basePrompt = """
+            Study the reference image and apply its key visual elements to the base image in a natural, flattering way.
+            Keep the person's identity, facial features, and body proportions completely unchanged.
+            """
+        }
+
+        if let description = description?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {
+            return "\(basePrompt)\n\nAdditional guidance: \(description)"
+        }
+
+        return basePrompt
+    }
+
+    func clearInspirationReferences() {
+        inspirationReferences.removeAll()
     }
 
     func restoreEdit(_ edit: VisualizationEdit) {

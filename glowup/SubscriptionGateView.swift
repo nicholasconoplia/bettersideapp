@@ -156,7 +156,7 @@ struct SubscriptionGateView: View {
             if selectedPlan.supportsTrial {
                 Toggle(isOn: $includeTrial) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Activate 7-day free trial")
+                        Text("Activate 3-day free trial")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
                         Text("We’ll only bill after your trial ends. Cancel anytime in Settings → Subscriptions.")
@@ -691,7 +691,7 @@ struct SubscriptionReconsiderationView: View {
             }
 
             if plan.supportsTrial {
-                Text("7-day free trial, then \(plan.primaryBillingAmount)/year. Cancel anytime before it renews.")
+                Text("3-day free trial, then \(plan.primaryBillingAmount)/year. Cancel anytime before it renews.")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.85))
             } else {

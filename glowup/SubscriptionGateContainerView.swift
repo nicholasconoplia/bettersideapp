@@ -33,7 +33,7 @@ struct SubscriptionGateContainerView: View {
                 } else {
                     SubscriptionGateView(
                         preview: currentPreview,
-                        primaryButtonTitle: "Start 7-Day Free Trial",
+                        primaryButtonTitle: "Start 3-Day Free Trial",
                         showBack: false,
                         onPrimary: { product in
                             isProcessing = true

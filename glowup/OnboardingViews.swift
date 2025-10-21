@@ -121,7 +121,7 @@ struct OnboardingFlowView: View {
         case .subscription:
             SubscriptionGateView(
                 preview: analysisPreview ?? PaywallPreviewBuilder.makePreview(from: quizResult),
-                primaryButtonTitle: "Start 7-Day Free Trial",
+                primaryButtonTitle: "Start 3-Day Free Trial",
                 showBack: false,
                 onPrimary: { product in
                     try await subscriptionManager.purchaseSubscription(for: product)

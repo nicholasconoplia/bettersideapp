@@ -19,6 +19,7 @@ struct VisualizationSessionView: View {
     @State private var showLikeDialog = false
     @State private var showLikeSheet = false   // ✅ Added for iPad fix
     @State private var showSavedAlert = false
+    @State private var showInspirationInput = false
 
     private var activePresets: [VisualizationPreset] {
         viewModel.activePresets
@@ -111,6 +112,21 @@ struct VisualizationSessionView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(GradientBackground.primary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showInspirationInput = true
+                } label: {
+                    Label("Add Inspiration", systemImage: "photo.badge.plus")
+                        .font(.headline)
+                }
+                .tint(.white)
+            }
+        }
+        .sheet(isPresented: $showInspirationInput) {
+            InspirationInputView()
+                .environmentObject(viewModel)
+        }
     }
 
     private func content(for session: VisualizationSession, displayImage: UIImage) -> some View {
@@ -322,6 +338,65 @@ struct VisualizationSessionView: View {
                     .foregroundStyle(.white)
                 Spacer()
             }
+
+            // Inspiration quick entry card
+            Button {
+                showInspirationInput = true
+            } label: {
+                HStack(spacing: 16) {
+                    Image(systemName: "photo.stack.fill")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.94, green: 0.34, blue: 0.56),
+                                    Color(red: 1.0, green: 0.6, blue: 0.78)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 48, height: 48)
+                        .background(Color.white.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Upload Inspiration Photo")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text("Show Nano Banana a look you want to try")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.white.opacity(0.5))
+                        .font(.body.weight(.semibold))
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.94, green: 0.34, blue: 0.56).opacity(0.5),
+                                    Color(red: 1.0, green: 0.6, blue: 0.78).opacity(0.3)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, 8)
 
             if activePresets.isEmpty {
                 Text("Once you have an analysis linked, smart presets will appear here.")

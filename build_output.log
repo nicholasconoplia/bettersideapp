@@ -1,0 +1,42 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project glowup.xcodeproj -scheme glowup -sdk iphonesimulator -destination "platform=iOS Simulator,name=iPhone 15" clean build
+
+User defaults from command line:
+    IDEPackageSupportUseBuiltinSCM = YES
+
+Build settings from command line:
+    SDKROOT = iphonesimulator18.2
+
+2025-10-19 21:32:46.863 xcodebuild[13926:7373301] Writing error result bundle to /var/folders/r5/52b_7zf95kg6s_67_kj942xc0000gn/T/ResultBundle_2025-19-10_21-32-0046.xcresult
+xcodebuild: error: Unable to find a device matching the provided destination specifier:
+		{ platform:iOS Simulator, OS:latest, name:iPhone 15 }
+
+	The requested device could not be found because no available devices matched the request.
+
+	Available destinations for the "glowup" scheme:
+		{ platform:macOS, arch:arm64, variant:Designed for [iPad,iPhone], id:00008103-001225A921D9001E, name:My Mac }
+		{ platform:iOS, arch:arm64, id:00008110-000855C00A6A401E, name:Nick }
+		{ platform:iOS, id:dvtdevice-DVTiPhonePlaceholder-iphoneos:placeholder, name:Any iOS Device }
+		{ platform:iOS Simulator, id:dvtdevice-DVTiOSDeviceSimulatorPlaceholder-iphonesimulator:placeholder, name:Any iOS Simulator Device }
+		{ platform:iOS Simulator, id:ABA14593-9B2E-460D-8699-A94524464D23, OS:18.3.1, name:iPad (10th generation) }
+		{ platform:iOS Simulator, id:ABA14593-9B2E-460D-8699-A94524464D23, OS:18.3.1, name:iPad (10th generation) }
+		{ platform:iOS Simulator, id:9CC36FD6-1A18-46AC-A284-10F981511E0D, OS:18.3.1, name:iPad Air 11-inch (M2) }
+		{ platform:iOS Simulator, id:9CC36FD6-1A18-46AC-A284-10F981511E0D, OS:18.3.1, name:iPad Air 11-inch (M2) }
+		{ platform:iOS Simulator, id:2518CB84-7605-4549-A19B-2221A5BF7923, OS:18.3.1, name:iPad Air 13-inch (M2) }
+		{ platform:iOS Simulator, id:2518CB84-7605-4549-A19B-2221A5BF7923, OS:18.3.1, name:iPad Air 13-inch (M2) }
+		{ platform:iOS Simulator, id:C1DE769C-1B41-4608-9BCC-B683171919CB, OS:18.3.1, name:iPad Pro 11-inch (M4) }
+		{ platform:iOS Simulator, id:C1DE769C-1B41-4608-9BCC-B683171919CB, OS:18.3.1, name:iPad Pro 11-inch (M4) }
+		{ platform:iOS Simulator, id:28AAF857-6538-4EA3-A796-EE28C072B549, OS:18.3.1, name:iPad Pro 13-inch (M4) }
+		{ platform:iOS Simulator, id:28AAF857-6538-4EA3-A796-EE28C072B549, OS:18.3.1, name:iPad Pro 13-inch (M4) }
+		{ platform:iOS Simulator, id:890A32A1-9876-49EC-A579-CF446CB3AB87, OS:18.3.1, name:iPad mini (A17 Pro) }
+		{ platform:iOS Simulator, id:890A32A1-9876-49EC-A579-CF446CB3AB87, OS:18.3.1, name:iPad mini (A17 Pro) }
+		{ platform:iOS Simulator, id:6AFF2F83-93CE-4283-976B-B49008396566, OS:18.3.1, name:iPhone 16 }
+		{ platform:iOS Simulator, id:6AFF2F83-93CE-4283-976B-B49008396566, OS:18.3.1, name:iPhone 16 }
+		{ platform:iOS Simulator, id:6825C421-DA64-4E3D-89FA-46AADCCB0640, OS:18.3.1, name:iPhone 16 Plus }
+		{ platform:iOS Simulator, id:6825C421-DA64-4E3D-89FA-46AADCCB0640, OS:18.3.1, name:iPhone 16 Plus }
+		{ platform:iOS Simulator, id:B927ED95-E1FD-446F-BD21-48770EE302E2, OS:18.3.1, name:iPhone 16 Pro }
+		{ platform:iOS Simulator, id:B927ED95-E1FD-446F-BD21-48770EE302E2, OS:18.3.1, name:iPhone 16 Pro }
+		{ platform:iOS Simulator, id:811F6FC8-FBD8-4699-B836-947B79EEDDA9, OS:18.3.1, name:iPhone 16 Pro Max }
+		{ platform:iOS Simulator, id:811F6FC8-FBD8-4699-B836-947B79EEDDA9, OS:18.3.1, name:iPhone 16 Pro Max }
+		{ platform:iOS Simulator, id:D9C72F05-51B3-42E5-BFA9-BECF925BD0D8, OS:18.3.1, name:iPhone SE (3rd generation) }
+		{ platform:iOS Simulator, id:D9C72F05-51B3-42E5-BFA9-BECF925BD0D8, OS:18.3.1, name:iPhone SE (3rd generation) }
