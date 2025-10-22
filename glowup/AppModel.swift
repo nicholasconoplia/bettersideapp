@@ -19,6 +19,9 @@ final class AppModel: ObservableObject {
     @Published private(set) var isSubscribed = false
     @Published private(set) var isBootstrapping = true
     @Published var latestQuiz: OnboardingQuiz?
+    @Published var quickActionAlert: QuickActionAlertContext?
+    @Published var pendingPlacement: String?
+    @Published var suppressDefaultPaywallForSession = false
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -102,6 +105,10 @@ final class AppModel: ObservableObject {
             persistenceController.saveIfNeeded()
         }
         self.isSubscribed = isSubscribed
+        // If the user already has an active subscription, skip onboarding entirely
+        if isSubscribed && !onboardingComplete {
+            markOnboardingComplete()
+        }
     }
 
     private func fetchLatestQuiz() -> OnboardingQuiz? {
@@ -110,10 +117,46 @@ final class AppModel: ObservableObject {
         request.fetchLimit = 1
         return try? persistenceController.viewContext.fetch(request).first
     }
+
+    struct QuickActionAlertContext: Identifiable {
+        let id = UUID()
+        let title: String
+        let message: String
+        let confirmButtonTitle: String
+        let url: URL
+    }
 }
 
 extension AppModel: SubscriptionManagerDelegate {
     func subscriptionManagerDidCompletePurchase(_ manager: SubscriptionManager) {
         markOnboardingComplete()
+    }
+}
+
+extension AppModel: GlowUpQuickActionHandling {
+    @discardableResult
+    func handleQuickAction(_ action: GlowUpQuickAction) -> Bool {
+        switch action {
+        case .homescreenLastChance:
+            // Trigger the homescreen last chance Superwall placement
+            Task { @MainActor in
+                #if canImport(SuperwallKit)
+                print("[AppModel] QuickAction: homescreen_last_chance tapped")
+                // Bypass onboarding and other gates immediately
+                if !onboardingComplete {
+                    if let _ = userSettings {
+                        markOnboardingComplete()
+                    } else {
+                        // Bootstrap not finished; set in-memory flag now
+                        onboardingComplete = true
+                    }
+                }
+                suppressDefaultPaywallForSession = true
+                pendingPlacement = "homescreen_last_chance"
+                // RootView will present this placement once the window is active
+                #endif
+            }
+            return true
+        }
     }
 }

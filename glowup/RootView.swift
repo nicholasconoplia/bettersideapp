@@ -9,21 +9,59 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var appModel: AppModel
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         Group {
-            if appModel.isBootstrapping {
+            // If a quick action set a pending Superwall placement, trigger it ASAP
+            if let placement = appModel.pendingPlacement {
+                Color.clear
+                    .task {
+                        // brief delay to ensure window is active
+                        try? await Task.sleep(nanoseconds: 250_000_000)
+                        print("[RootView] Triggering pending placement: \(placement)")
+                        SuperwallService.shared.registerEvent(placement)
+                        appModel.pendingPlacement = nil
+                    }
+            } else if appModel.isBootstrapping {
                 SplashLoadingView()
             } else if !appModel.onboardingComplete {
                 OnboardingFlowView()
             } else if !appModel.isSubscribed {
-                SubscriptionGateContainerView()
+                if appModel.suppressDefaultPaywallForSession {
+                    Color.clear
+                        .task {
+                            print("[RootView] Suppressing default paywall host due to quick action")
+                        }
+                } else {
+                    SuperwallPaywallHostView(
+                        preview: PaywallPreviewBuilder.makePreview(from: appModel.latestQuiz.map { QuizResult(from: $0) })
+                    )
+                }
             } else {
                 GlowUpTabView()
             }
         }
         .animation(.easeInOut, value: appModel.onboardingComplete)
         .animation(.easeInOut, value: appModel.isSubscribed)
+        .alert(
+            item: Binding<AppModel.QuickActionAlertContext?>(
+                get: { appModel.quickActionAlert },
+                set: { appModel.quickActionAlert = $0 }
+            )
+        ) { alertContext in
+            Alert(
+                title: Text(alertContext.title),
+                message: Text(alertContext.message),
+                primaryButton: .default(Text(alertContext.confirmButtonTitle)) {
+                    _ = openURL(alertContext.url)
+                    appModel.quickActionAlert = nil
+                },
+                secondaryButton: .cancel {
+                    appModel.quickActionAlert = nil
+                }
+            )
+        }
     }
 }
 

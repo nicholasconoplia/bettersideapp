@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		01D7B83E2EA8208E00E92F43 /* SuperwallKit in Frameworks */ = {isa = PBXBuildFile; productRef = 01D7B83D2EA8208E00E92F43 /* SuperwallKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		0112614A2E9D99E500952FEF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				01D7B83E2EA8208E00E92F43 /* SuperwallKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = glowup;
 			packageProductDependencies = (
+				01D7B83D2EA8208E00E92F43 /* SuperwallKit */,
 			);
 			productName = glowup;
 			productReference = 011261342E9D99E400952FEF /* glowup.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = 0112612B2E9D99E400952FEF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				01D7B83C2EA8208E00E92F43 /* XCRemoteSwiftPackageReference "Superwall-iOS" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 011261352E9D99E400952FEF /* Products */;
 			projectDirPath = "";
@@ -574,6 +583,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		01D7B83C2EA8208E00E92F43 /* XCRemoteSwiftPackageReference "Superwall-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/superwall/Superwall-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.9.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		01D7B83D2EA8208E00E92F43 /* SuperwallKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 01D7B83C2EA8208E00E92F43 /* XCRemoteSwiftPackageReference "Superwall-iOS" */;
+			productName = SuperwallKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0112612C2E9D99E400952FEF /* Project object */;
 }

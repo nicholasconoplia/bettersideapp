@@ -15,6 +15,7 @@ protocol SubscriptionManagerDelegate: AnyObject {
 enum GlowUpProduct: String, CaseIterable {
     case proMonthly = "com.glowup.pro.month"
     case proAnnual = "com.glowup.pro.annual"
+    case proMonthlyExtended = "com.glowup.pro.monthlyextended"
 
     static var allIDs: [String] {
         GlowUpProduct.allCases.map(\.rawValue)

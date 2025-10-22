@@ -119,20 +119,8 @@ struct OnboardingFlowView: View {
                 }
             )
         case .subscription:
-            SubscriptionGateView(
-                preview: analysisPreview ?? PaywallPreviewBuilder.makePreview(from: quizResult),
-                primaryButtonTitle: "Start 3-Day Free Trial",
-                showBack: false,
-                onPrimary: { product in
-                    try await subscriptionManager.purchaseSubscription(for: product)
-                    await subscriptionManager.refreshEntitlementState()
-                },
-                onBack: nil,
-                onDecline: {
-                    withAnimation(.easeInOut) {
-                        step = .reconsideration
-                    }
-                }
+            SuperwallPaywallHostView(
+                preview: analysisPreview ?? PaywallPreviewBuilder.makePreview(from: quizResult)
             )
         case .reconsideration:
             SubscriptionReconsiderationView(
