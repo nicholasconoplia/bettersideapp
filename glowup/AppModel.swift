@@ -22,8 +22,10 @@ final class AppModel: ObservableObject {
     @Published var quickActionAlert: QuickActionAlertContext?
     @Published var pendingPlacement: String?
     @Published var suppressDefaultPaywallForSession = false
+    @Published var isPresentingQuickActionPaywall = false
 
     private var cancellables = Set<AnyCancellable>()
+    private var shouldMarkOnboardingCompleteAfterBootstrap = false
 
     init(persistenceController: PersistenceController, subscriptionManager: SubscriptionManager) {
         self.persistenceController = persistenceController
@@ -46,7 +48,14 @@ final class AppModel: ObservableObject {
         let context = persistenceController.viewContext
         let settings = persistenceController.ensureUserSettings(in: context)
         userSettings = settings
-        onboardingComplete = settings.onboardingComplete
+        if shouldMarkOnboardingCompleteAfterBootstrap {
+            settings.onboardingComplete = true
+            onboardingComplete = true
+            shouldMarkOnboardingCompleteAfterBootstrap = false
+            persistenceController.saveIfNeeded()
+        } else {
+            onboardingComplete = settings.onboardingComplete
+        }
         isSubscribed = settings.isProSubscriber
 
         latestQuiz = fetchLatestQuiz()
@@ -133,30 +142,31 @@ extension AppModel: SubscriptionManagerDelegate {
     }
 }
 
-extension AppModel: GlowUpQuickActionHandling {
-    @discardableResult
-    func handleQuickAction(_ action: GlowUpQuickAction) -> Bool {
-        switch action {
-        case .homescreenLastChance:
-            // Trigger the homescreen last chance Superwall placement
-            Task { @MainActor in
-                #if canImport(SuperwallKit)
-                print("[AppModel] QuickAction: homescreen_last_chance tapped")
-                // Bypass onboarding and other gates immediately
-                if !onboardingComplete {
-                    if let _ = userSettings {
-                        markOnboardingComplete()
-                    } else {
-                        // Bootstrap not finished; set in-memory flag now
-                        onboardingComplete = true
-                    }
-                }
-                suppressDefaultPaywallForSession = true
-                pendingPlacement = "homescreen_last_chance"
-                // RootView will present this placement once the window is active
-                #endif
-            }
-            return true
+// Quick action handling removed for this release build
+
+extension AppModel {
+    @MainActor
+    func triggerPendingPlacementIfReady() async {
+        guard let placement = pendingPlacement else { return }
+        isPresentingQuickActionPaywall = true
+
+        var attempts = 0
+        while isBootstrapping && attempts < 20 {
+            attempts += 1
+            try? await Task.sleep(nanoseconds: 100_000_000)
         }
+
+        await SuperwallService.shared.waitForConfiguration()
+
+        // Allow a brief moment for the SwiftUI hierarchy to finish mounting
+        try? await Task.sleep(nanoseconds: 150_000_000)
+
+        print("[AppModel] Triggering pending placement after readiness: \(placement)")
+        SuperwallService.shared.registerEvent(placement)
+        pendingPlacement = nil
+
+        // Release the splash after a short grace period; the paywall will be on top
+        try? await Task.sleep(nanoseconds: 900_000_000) // 0.9s
+        isPresentingQuickActionPaywall = false
     }
 }

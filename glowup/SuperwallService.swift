@@ -19,9 +19,12 @@ final class SuperwallService: ObservableObject {
 
     private init() {}
 
+    private var configurationFlag = AtomicFlag()
+
     func configureIfPossible() {
         guard let apiKey = Secrets.superwallApiKey, !apiKey.isEmpty else {
             print("[SuperwallService] No SUPERWALL_API_KEY found. Skipping configuration.")
+            configurationFlag.set()
             return
         }
 
@@ -34,6 +37,7 @@ final class SuperwallService: ObservableObject {
         #else
         print("[SuperwallService] SuperwallKit is not available in this build.")
         #endif
+        configurationFlag.set()
     }
 
     func registerEvent(_ name: String) {
@@ -123,6 +127,31 @@ final class SuperwallService: ObservableObject {
             await presentAndAwaitDismissal(key, timeoutSeconds: timeoutSeconds)
         }
     }
+
+    @MainActor
+    func waitForConfiguration(timeout: TimeInterval = 3) async {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !configurationFlag.isSet, Date() < deadline {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+    }
 }
 
+private final class AtomicFlag {
+    private let lock = NSLock()
+    private var value = false
+
+    var isSet: Bool {
+        lock.lock()
+        let current = value
+        lock.unlock()
+        return current
+    }
+
+    func set() {
+        lock.lock()
+        value = true
+        lock.unlock()
+    }
+}
 

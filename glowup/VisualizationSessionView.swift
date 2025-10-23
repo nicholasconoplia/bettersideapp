@@ -364,7 +364,7 @@ struct VisualizationSessionView: View {
                         Text("Upload Inspiration Photo")
                             .font(.headline)
                             .foregroundStyle(.white)
-                        Text("Show Nano Banana a look you want to try")
+                        Text("Upload an inspiration photo of the look you want to try")
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.7))
                     }

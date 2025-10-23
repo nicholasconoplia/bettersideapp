@@ -22,7 +22,6 @@ struct GlowUpApp: App {
             subscriptionManager: subscriptionManager
         )
         _appModel = StateObject(wrappedValue: model)
-        appDelegate.quickActionHandler = model
 
         // Configure Superwall early when possible
         SuperwallService.shared.configureIfPossible()

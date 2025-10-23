@@ -14,14 +14,15 @@ struct RootView: View {
     var body: some View {
         Group {
             // If a quick action set a pending Superwall placement, trigger it ASAP
-            if let placement = appModel.pendingPlacement {
-                Color.clear
+            if appModel.isPresentingQuickActionPaywall {
+                SplashLoadingView()
+            } else if let _ = appModel.pendingPlacement {
+                SplashLoadingView()
                     .task {
-                        // brief delay to ensure window is active
-                        try? await Task.sleep(nanoseconds: 250_000_000)
-                        print("[RootView] Triggering pending placement: \(placement)")
-                        SuperwallService.shared.registerEvent(placement)
-                        appModel.pendingPlacement = nil
+                        print("[RootView] Pending placement detected; waiting for Superwall readiness...")
+                        await SuperwallService.shared.waitForConfiguration()
+                        print("[RootView] Superwall ready, triggering placement...")
+                        await appModel.triggerPendingPlacementIfReady()
                     }
             } else if appModel.isBootstrapping {
                 SplashLoadingView()

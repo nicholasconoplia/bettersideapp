@@ -68,7 +68,7 @@ struct InspirationInputView: View {
 				.font(.title2.bold())
 				.foregroundStyle(.white)
 
-			Text("Show Nano Banana a photo of the look you want to try, and it will blend it with your image.")
+			Text("Upload a photo of the look you want to try, and it will blend it with your image.")
 				.font(.subheadline)
 				.foregroundStyle(.white.opacity(0.75))
 				.multilineTextAlignment(.center)
