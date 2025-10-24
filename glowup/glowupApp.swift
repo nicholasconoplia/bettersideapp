@@ -25,6 +25,7 @@ struct GlowUpApp: App {
 
         // Configure Superwall early when possible
         SuperwallService.shared.configureIfPossible()
+        SuperwallService.shared.attachSubscriptionManager(subscriptionManager)
     }
 
     var body: some Scene {

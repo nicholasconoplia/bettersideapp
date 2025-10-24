@@ -1,3 +1,4 @@
+// Placeholder to ensure StudioContainerView compiles if needed
 //
 //  VisualizationViewModel.swift
 //  glowup

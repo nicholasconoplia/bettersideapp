@@ -9,10 +9,11 @@ import SwiftUI
 import CoreData
 import UIKit
 
-struct ResultsView: View {
-    @Binding var selection: GlowTab
+struct ResultsSheetView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var visualizationViewModel: VisualizationViewModel
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @AppStorage("hasUsedFreeScan") private var hasUsedFreeScan = false
 
     @FetchRequest(
         entity: PhotoSession.entity(),
@@ -23,9 +24,7 @@ struct ResultsView: View {
     @State private var expandedSessions: Set<NSManagedObjectID> = []
     @State private var showClearConfirmation = false
 
-    init(selection: Binding<GlowTab>) {
-        _selection = selection
-    }
+    init() {}
 
     var body: some View {
         NavigationStack {
@@ -47,7 +46,7 @@ struct ResultsView: View {
                     }
                 }
             }
-            .navigationTitle("Results")
+            .navigationTitle("Previous Analyses")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -111,7 +110,9 @@ struct ResultsView: View {
                         RoundedRectangle(cornerRadius: 26, style: .continuous)
                             .stroke(Color.white.opacity(0.06), lineWidth: 1)
                     )
-                    visualizeButton(for: session)
+                    if subscriptionManager.isSubscribed {
+                        visualizeButton(for: session)
+                    }
                 } else {
                     missingAnalysisSection
                 }
@@ -260,7 +261,13 @@ struct ResultsView: View {
 
     private func visualizeButton(for session: PhotoSession) -> some View {
         Button {
-            visualizeSession(session)
+            if subscriptionManager.isSubscribed {
+                visualizeSession(session)
+            } else if hasUsedFreeScan {
+                SuperwallService.shared.registerEvent("subscription_paywall")
+            } else {
+                visualizeSession(session)
+            }
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "wand.and.stars")
@@ -280,7 +287,6 @@ struct ResultsView: View {
 
     private func visualizeSession(_ session: PhotoSession) {
         visualizationViewModel.prepareLaunch(from: session)
-        selection = .visualize
     }
 
     private func clearAllHistory() {

@@ -67,6 +67,39 @@
         <attribute name="targetProfessional" optional="NO" attributeType="String"/>
         <relationship name="session" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="VisualizationSession" inverseName="notes" inverseEntity="VisualizationSession"/>
     </entity>
+    <entity name="RoadmapPlan" representedClassName="RoadmapPlan" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="currentWeek" optional="NO" attributeType="Integer 16" defaultValueString="1" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="lastUpdatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="sourceAnalysisID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="totalWeeks" optional="NO" attributeType="Integer 16" defaultValueString="12" usesScalarValueType="YES"/>
+        <relationship name="weeks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="RoadmapWeek" inverseName="plan" inverseEntity="RoadmapWeek"/>
+    </entity>
+    <entity name="RoadmapTask" representedClassName="RoadmapTask" syncable="YES" codeGenerationType="class">
+        <attribute name="body" optional="NO" attributeType="String"/>
+        <attribute name="category" optional="NO" attributeType="String"/>
+        <attribute name="completedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isCompleted" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="priority" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="productSuggestions" optional="YES" attributeType="String"/>
+        <attribute name="timeframe" optional="NO" attributeType="String"/>
+        <attribute name="title" optional="NO" attributeType="String"/>
+        <relationship name="week" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="RoadmapWeek" inverseName="tasks" inverseEntity="RoadmapWeek"/>
+    </entity>
+    <entity name="RoadmapWeek" representedClassName="RoadmapWeek" syncable="YES" codeGenerationType="class">
+        <attribute name="completedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isCompleted" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="isUnlocked" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="summary" optional="NO" attributeType="String"/>
+        <attribute name="title" optional="NO" attributeType="String"/>
+        <attribute name="unlockedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="weekNumber" optional="NO" attributeType="Integer 16" usesScalarValueType="YES"/>
+        <relationship name="plan" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="RoadmapPlan" inverseName="weeks" inverseEntity="RoadmapPlan"/>
+        <relationship name="tasks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="RoadmapTask" inverseName="week" inverseEntity="RoadmapTask"/>
+    </entity>
     <entity name="TipEntry" representedClassName="TipEntry" syncable="YES" codeGenerationType="class">
         <attribute name="body" optional="NO" attributeType="String"/>
         <attribute name="completed" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
@@ -94,5 +127,8 @@
         <element name="VisualizationSession" positionX="617" positionY="-18" width="128" height="148"/>
         <element name="VisualizationEdit" positionX="617" positionY="174" width="128" height="178"/>
         <element name="VisualizationNote" positionX="787" positionY="-18" width="128" height="178"/>
+        <element name="RoadmapPlan" positionX="957" positionY="-18" width="128" height="178"/>
+        <element name="RoadmapWeek" positionX="957" positionY="174" width="128" height="178"/>
+        <element name="RoadmapTask" positionX="1127" positionY="174" width="128" height="178"/>
     </elements>
 </model>

@@ -10,6 +10,7 @@ import UIKit
 
 struct HomeView: View {
     @Binding var selection: GlowTab
+    @State private var showResultsSheet = false
 
     @EnvironmentObject private var appModel: AppModel
     @FetchRequest(
@@ -28,6 +29,7 @@ struct HomeView: View {
                     VStack(spacing: 28) {
                         greetingHeader
                         heroCTA
+                        quickLinksSection
                         recentSessionsSection
                     }
                     .padding(.horizontal, 20)
@@ -54,7 +56,7 @@ struct HomeView: View {
 
     private var heroCTA: some View {
         Button {
-            selection = .coach
+            selection = .analyze
         } label: {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Analyze a Photo")
@@ -87,6 +89,80 @@ struct HomeView: View {
         }
     }
 
+    private var quickLinksSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Jump Back In")
+                .font(.headline)
+                .foregroundStyle(.white.opacity(0.9))
+
+            ViewThatFits {
+                HStack(spacing: 16) {
+                    quickLinkCard(
+                        title: "Roadmap",
+                        subtitle: "Review this week's action plan",
+                        icon: "calendar.badge.checkmark"
+                    ) {
+                        selection = .roadmap
+                    }
+
+                    quickLinkCard(
+                        title: "Visualize",
+                        subtitle: "Try new looks instantly",
+                        icon: "wand.and.stars"
+                    ) {
+                        selection = .studio
+                    }
+                }
+
+                VStack(spacing: 16) {
+                    quickLinkCard(
+                        title: "Roadmap",
+                        subtitle: "Review this week's action plan",
+                        icon: "calendar.badge.checkmark"
+                    ) {
+                        selection = .roadmap
+                    }
+
+                    quickLinkCard(
+                        title: "Visualize",
+                        subtitle: "Try new looks instantly",
+                        icon: "wand.and.stars"
+                    ) {
+                        selection = .studio
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func quickLinkCard(
+        title: String,
+        subtitle: String,
+        icon: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 10) {
+                Image(systemName: icon)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
     private var recentSessionsSection: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
@@ -96,7 +172,7 @@ struct HomeView: View {
                 Spacer()
                 if !recentSessions.isEmpty {
                     Button {
-                        selection = .results
+                        showResultsSheet = true
                     } label: {
                         HStack(spacing: 6) {
                             Text("View All")
@@ -175,7 +251,7 @@ struct HomeView: View {
             Spacer()
 
             Button {
-                selection = .results
+                showResultsSheet = true
             } label: {
                 Image(systemName: "arrow.up.right")
                     .font(.caption2.weight(.bold))
@@ -210,6 +286,15 @@ struct HomeView: View {
                 .stroke(Color.white.opacity(0.2), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.18), radius: 8, y: 6)
+    }
+
+    // Present previous analyses in a sheet since Results tab is merged into Analyze.
+    @ViewBuilder
+    private var resultsSheetPresenter: some View {
+        EmptyView()
+            .sheet(isPresented: $showResultsSheet) {
+                ResultsSheetView()
+            }
     }
 
     private var greetingName: String {

@@ -14,6 +14,7 @@ struct StaticPhotoAnalysisView: View {
     let persona: CoachPersona
     let bundle: PhotoAnalysisBundle
 
+    @AppStorage("hasUsedFreeScan") private var hasUsedFreeScan = false
     @State private var session: PhotoSession?
     @State private var analysisResult: DetailedPhotoAnalysis?
     @State private var isLoading = true
@@ -22,6 +23,7 @@ struct StaticPhotoAnalysisView: View {
     @State private var currentStage = "Preparing images…"
     @State private var loadingStartDate: Date?
     @State private var isStageTimerActive = false
+    @State private var showRoadmapPrompt = false
     
     private let stageTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private let stageTimeline: [(threshold: TimeInterval, label: String)] = [
@@ -31,6 +33,10 @@ struct StaticPhotoAnalysisView: View {
         (60, "Generating personalized insights…"),
         (90, "Finalizing recommendations…")
     ]
+
+    private var roadmapPromptTitle: String {
+        appModel.hasActiveRoadmap ? "Regenerate Your Personalized Roadmap?" : "Generate Your Personalized Roadmap?"
+    }
     var body: some View {
         NavigationStack {
             ZStack {
@@ -85,6 +91,7 @@ struct StaticPhotoAnalysisView: View {
         .onDisappear {
             endLoadingFeedback()
         }
+        // Removed post-scan roadmap generation prompt per product decision.
     }
 
     private var shouldShowStartPrompt: Bool { lastAttemptFailed }
@@ -235,6 +242,15 @@ struct StaticPhotoAnalysisView: View {
                 analysisResult = finalResult.analysis
                 lastAttemptFailed = false
                 appModel.logSession()
+                appModel.registerCompletedAnalysis(session: finalResult.session, analysis: finalResult.analysis)
+                appModel.refreshRoadmapState()
+                showRoadmapPrompt = true
+
+                // Mark the one-time free scan as consumed and register an event for analytics/targeting.
+                if !hasUsedFreeScan {
+                    hasUsedFreeScan = true
+                    SuperwallService.shared.registerEvent("limited_scan_complete")
+                }
             }
         } else {
             lastAttemptFailed = true

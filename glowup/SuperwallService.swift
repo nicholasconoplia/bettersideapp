@@ -19,9 +19,17 @@ final class SuperwallService: ObservableObject {
 
     private init() {}
 
+    private(set) var isAvailable = false
     private var configurationFlag = AtomicFlag()
+    private weak var attachedSubscriptionManager: SubscriptionManager?
+
+    func attachSubscriptionManager(_ manager: SubscriptionManager) {
+        attachedSubscriptionManager = manager
+    }
 
     func configureIfPossible() {
+        guard !configurationFlag.isSet else { return }
+        isAvailable = false
         guard let apiKey = Secrets.superwallApiKey, !apiKey.isEmpty else {
             print("[SuperwallService] No SUPERWALL_API_KEY found. Skipping configuration.")
             configurationFlag.set()
@@ -34,6 +42,7 @@ final class SuperwallService: ObservableObject {
         options.logging.level = .debug
         Superwall.configure(apiKey: apiKey, options: options)
         print("[SuperwallService] Superwall configured (logging: debug)")
+        isAvailable = true
         #else
         print("[SuperwallService] SuperwallKit is not available in this build.")
         #endif
@@ -55,12 +64,14 @@ final class SuperwallService: ObservableObject {
                 if let token { NotificationCenter.default.removeObserver(token) }
                 Superwall.shared.register(placement: name)
                 print("[SuperwallService] (Deferred) Event '\(name)' registered after dismissal")
+                Task { await self.refreshEntitlementsAfterPresentation() }
             }
             #endif
             return
         }
         Superwall.shared.register(placement: name)
         print("[SuperwallService] Event '\(name)' registered (isPaywallPresented=\(Superwall.shared.isPaywallPresented))")
+        Task { await refreshEntitlementsAfterPresentation() }
         #endif
     }
 
@@ -71,6 +82,7 @@ final class SuperwallService: ObservableObject {
         // Newer SDKs renamed 'event' to 'placement' and handle presentation internally.
         Superwall.shared.register(placement: "subscription_paywall")
         print("[SuperwallService] Requested paywall for placement 'subscription_paywall' (isPaywallPresented=\(Superwall.shared.isPaywallPresented))")
+        Task { await refreshEntitlementsAfterPresentation() }
         return true
         #else
         return false
@@ -81,10 +93,13 @@ final class SuperwallService: ObservableObject {
 
     /// Presents a placement and awaits dismissal by observing when the app becomes active again.
     /// Falls back after a timeout so the UI never hangs if there's no rule match.
-    func presentAndAwaitDismissal(_ placement: String, timeoutSeconds: UInt64 = 2) async {
+    @discardableResult
+    func presentAndAwaitDismissal(_ placement: String, timeoutSeconds: UInt64 = 2) async -> Bool {
+        var didAttemptPresentation = false
         #if canImport(SuperwallKit)
         print("[SuperwallService] Presenting placement: \(placement) (isPaywallPresented=\(Superwall.shared.isPaywallPresented))")
         Superwall.shared.register(placement: placement)
+        didAttemptPresentation = true
         #else
         print("[SuperwallService] SuperwallKit unavailable; skipping placement: \(placement)")
         #endif
@@ -119,13 +134,36 @@ final class SuperwallService: ObservableObject {
         // Allow UI to settle briefly
         try? await Task.sleep(nanoseconds: 200_000_000)
         #endif
+
+        return didAttemptPresentation
     }
 
     /// Presents a sequence of placements one after another, awaiting dismissal between each.
     func presentSequence(_ placements: [String], timeoutSeconds: UInt64 = 10) async {
         for key in placements {
-            await presentAndAwaitDismissal(key, timeoutSeconds: timeoutSeconds)
+            _ = await presentAndAwaitDismissal(key, timeoutSeconds: timeoutSeconds)
         }
+    }
+
+    @MainActor
+    private func refreshEntitlementsAfterPresentation() async {
+        #if canImport(UIKit)
+        // Wait until app is active again after potential purchase flow.
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            var token: NSObjectProtocol?
+            token = NotificationCenter.default.addObserver(
+                forName: UIApplication.didBecomeActiveNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
+                if let token { NotificationCenter.default.removeObserver(token) }
+                cont.resume()
+            }
+        }
+        #endif
+        // Small grace to let SDK settle, then refresh entitlements.
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        await attachedSubscriptionManager?.refreshEntitlementState()
     }
 
     @MainActor
@@ -154,4 +192,3 @@ private final class AtomicFlag {
         lock.unlock()
     }
 }
-

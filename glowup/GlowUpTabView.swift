@@ -12,15 +12,17 @@ import UIKit
 
 enum GlowTab: Hashable {
     case home
-    case coach
-    case results
-    case visualize
-    case notes
+    case analyze
+    case roadmap
+    case studio
 }
 
 struct GlowUpTabView: View {
     @State private var selection: GlowTab = .home
     @StateObject private var visualizationViewModel = VisualizationViewModel()
+    @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @AppStorage("hasUsedFreeScan") private var hasUsedFreeScan = false
 
     init() {
         customizeTabBarAppearance()
@@ -37,32 +39,26 @@ struct GlowUpTabView: View {
                     }
                     .tag(GlowTab.home)
 
-                AICoachOptionsView()
+                AnalyzeContainerView()
                     .tabItem {
                         Label("Analyze", systemImage: "photo.on.rectangle")
                     }
-                    .tag(GlowTab.coach)
+                    .tag(GlowTab.analyze)
 
-                ResultsView(selection: $selection)
+                RoadmapView()
+                    .tabItem {
+                        Label("Roadmap", systemImage: "calendar.badge.checkmark")
+                    }
+                    .tag(GlowTab.roadmap)
+                    .badge(appModel.shouldShowRoadmapBadge() ? "!" : nil)
+
+                StudioContainerView()
                     .environmentObject(visualizationViewModel)
                     .tabItem {
-                        Label("Results", systemImage: "clock.fill")
+                        Label("Studio", systemImage: "wand.and.stars.inverse")
                     }
-                    .tag(GlowTab.results)
-
-                VisualizeView()
-                    .environmentObject(visualizationViewModel)
-                    .tabItem {
-                        Label("Visualize", systemImage: "wand.and.stars.inverse")
-                    }
-                    .tag(GlowTab.visualize)
-
-                NotesView()
-                    .environmentObject(visualizationViewModel)
-                    .tabItem {
-                        Label("Notes", systemImage: "note.text")
-                    }
-                    .tag(GlowTab.notes)
+                    .tag(GlowTab.studio)
+                    
             }
             .tint(.white)
         }

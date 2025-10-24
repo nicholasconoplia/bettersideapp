@@ -11,15 +11,19 @@ import SwiftUI
 import UIKit
 #endif
 
-struct AICoachOptionsView: View {
+struct AnalyzeContainerView: View {
     @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @Environment(\.managedObjectContext) private var context
 
+    @AppStorage("hasUsedFreeScan") private var hasUsedFreeScan = false
     @State private var personaSelection: CoachPersona = .bestie
     @State private var showUploadWizard = false
     @State private var showAnalysisSheet = false
     @State private var pendingBundle: PhotoAnalysisBundle?
     @State private var shouldPresentAnalysisAfterWizard = false
+
+    @State private var showResults = false
 
     var body: some View {
         NavigationStack {
@@ -30,6 +34,7 @@ struct AICoachOptionsView: View {
                     cameraPreview
                     helperText
                     buttonStack
+                    previousAnalysesButton
                     Spacer()
                 }
                 .padding(.horizontal, 24)
@@ -72,6 +77,9 @@ struct AICoachOptionsView: View {
                 personaSelection = persona
             }
         }
+        .sheet(isPresented: $showResults) {
+            ResultsSheetView()
+        }
     }
 
     private var cameraPreview: some View {
@@ -104,7 +112,13 @@ struct AICoachOptionsView: View {
     private var buttonStack: some View {
         VStack(spacing: 16) {
             Button {
-                showUploadWizard = true
+                if subscriptionManager.isSubscribed {
+                    showUploadWizard = true
+                } else if hasUsedFreeScan {
+                    SuperwallService.shared.registerEvent("subscription_paywall")
+                } else {
+                    showUploadWizard = true
+                }
             } label: {
                 GlowButton(
                     title: "Start Glow Scan",
@@ -121,11 +135,31 @@ struct AICoachOptionsView: View {
                 .padding(.top, 4)
         }
     }
+
+    private var previousAnalysesButton: some View {
+        Button {
+            showResults = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "clock.fill")
+                Text("View Previous Analyses")
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Color.white.opacity(0.14))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
 }
 
 // MARK: - Structured Multi-Photo Upload
 
 private struct StructuredPhotoUploadView: View {
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @AppStorage("hasUsedFreeScan") private var hasUsedFreeScan = false
     enum CaptureStage: String, CaseIterable, Identifiable {
         case face, skin
         
@@ -341,6 +375,10 @@ private struct StructuredPhotoUploadView: View {
     private var actionButtons: some View {
         VStack(spacing: 14) {
             Button {
+                if !subscriptionManager.isSubscribed && hasUsedFreeScan {
+                    SuperwallService.shared.registerEvent("subscription_paywall")
+                    return
+                }
                 if let faceData, let skinData {
                     let bundle = PhotoAnalysisBundle(face: faceData, skin: skinData, eyes: nil)
                     onComplete(bundle)

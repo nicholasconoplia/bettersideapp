@@ -10,26 +10,28 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.openURL) private var openURL
+    @State private var attemptedAutoRoadmapGeneration = false
 
     var body: some View {
         Group {
-            // If a quick action set a pending Superwall placement, trigger it ASAP
-            if appModel.isPresentingQuickActionPaywall {
-                SplashLoadingView()
-            } else if let _ = appModel.pendingPlacement {
-                SplashLoadingView()
-                    .task {
-                        print("[RootView] Pending placement detected; waiting for Superwall readiness...")
-                        await SuperwallService.shared.waitForConfiguration()
-                        print("[RootView] Superwall ready, triggering placement...")
-                        await appModel.triggerPendingPlacementIfReady()
-                    }
-            } else if appModel.isBootstrapping {
-                SplashLoadingView()
-            } else if !appModel.onboardingComplete {
+            // No splash screen: immediately render primary content based on state.
+            if !appModel.onboardingComplete {
                 OnboardingFlowView()
+            } else if appModel.isSubscribed && !appModel.hasActiveRoadmap {
+                // Route user to the main app immediately after subscribing.
+                // Generate the roadmap in the background so we never show a blank screen.
+                GlowUpTabView()
+                    .task {
+                        guard !attemptedAutoRoadmapGeneration else { return }
+                        attemptedAutoRoadmapGeneration = true
+                        await appModel.generateRoadmapFromLatestAnalysis()
+                        appModel.refreshRoadmapState()
+                    }
             } else if !appModel.isSubscribed {
-                if appModel.suppressDefaultPaywallForSession {
+                if appModel.onboardingComplete {
+                    // Limited mode: enter the app with one free scan.
+                    GlowUpTabView()
+                } else if appModel.suppressDefaultPaywallForSession {
                     Color.clear
                         .task {
                             print("[RootView] Suppressing default paywall host due to quick action")
@@ -41,6 +43,13 @@ struct RootView: View {
                 }
             } else {
                 GlowUpTabView()
+            }
+        }
+        // If a pending Superwall placement exists, trigger it in the background without blocking UI.
+        .task(id: appModel.pendingPlacement) {
+            if appModel.pendingPlacement != nil {
+                print("[RootView] Pending placement detected; triggering in background...")
+                await appModel.triggerPendingPlacementIfReady()
             }
         }
         .animation(.easeInOut, value: appModel.onboardingComplete)

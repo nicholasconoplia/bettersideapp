@@ -558,7 +558,37 @@ actor OpenAIService {
         throw OpenAIError.emptyResponse
     }
     
+    func callMiniChat(
+        prompt: String,
+        maxTokens: Int = 900,
+        temperature: Double = 0.65,
+        responseFormat: [String: Any]? = nil
+    ) async throws -> String {
+        try await callChat(
+            model: "gpt-4o-mini",
+            prompt: prompt,
+            maxTokens: maxTokens,
+            temperature: temperature,
+            responseFormat: responseFormat
+        )
+    }
+
     private func callGPT4(prompt: String) async throws -> String {
+        try await callChat(
+            model: "gpt-4o",
+            prompt: prompt,
+            maxTokens: 1000,
+            temperature: 0.7
+        )
+    }
+
+    private func callChat(
+        model: String,
+        prompt: String,
+        maxTokens: Int,
+        temperature: Double,
+        responseFormat: [String: Any]? = nil
+    ) async throws -> String {
         guard let apiKey = apiKey, !apiKey.isEmpty else {
             throw OpenAIError.apiKeyMissing
         }
@@ -568,14 +598,18 @@ actor OpenAIService {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         
-        let payload: [String: Any] = [
-            "model": "gpt-4o",
+        var payload: [String: Any] = [
+            "model": model,
             "messages": [
                 ["role": "user", "content": prompt]
             ],
-            "max_tokens": 1000,
-            "temperature": 0.7
+            "max_tokens": maxTokens,
+            "temperature": temperature
         ]
+
+        if let responseFormat {
+            payload["response_format"] = responseFormat
+        }
         
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
         

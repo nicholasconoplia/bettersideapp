@@ -122,6 +122,10 @@ struct OnboardingFlowView: View {
             SuperwallPaywallHostView(
                 preview: analysisPreview ?? PaywallPreviewBuilder.makePreview(from: quizResult)
             )
+            .task {
+                // Register onboarding_end for analytics/rules, presentation handled by host view.
+                SuperwallService.shared.registerEvent("onboarding_end")
+            }
         case .reconsideration:
             SubscriptionReconsiderationView(
                 onReturnToPlans: {

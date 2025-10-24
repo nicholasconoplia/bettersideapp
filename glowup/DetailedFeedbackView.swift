@@ -15,6 +15,8 @@ struct DetailedFeedbackView: View {
     private let showAnnotatedImage: Bool
     private let showsNavigationTitle: Bool
 
+	@EnvironmentObject private var subscriptionManager: SubscriptionManager
+	@AppStorage("hasUsedFreeScan") private var hasUsedFreeScan = false
     @Environment(\.openURL) private var openURL
     @State private var annotatedImage: UIImage?
     @State private var analysis: PhotoAnalysisVariables?
@@ -87,8 +89,27 @@ struct DetailedFeedbackView: View {
                 if isFallbackAnalysis {
                     fallbackMessage
                 } else if let analysis = analysis {
-                    overviewSection(analysis)
-                    detailedFeedbackSections(analysis)
+                    if subscriptionManager.isSubscribed || !hasUsedFreeScan {
+                        // Full access for subscribers or before consuming free scan
+                        overviewSection(analysis)
+                        detailedFeedbackSections(analysis)
+                    } else {
+                        // Limited preview after free scan for non-subscribers
+                        limitedPreviewSection(analysis)
+                        lockedSection(title: "Facial Harmony Map")
+                        lockedSection(title: "Skin Texture Insight")
+                        lockedSection(title: "Brows & Framing")
+                        lockedSection(title: "Trait Breakdown")
+                        lockedSection(title: "Soft-Max Roadmap")
+                        lockedSection(title: "Lighting")
+                        lockedSection(title: "Eye Color & Color Palette")
+                        lockedSection(title: "Pose & Angle")
+                        lockedSection(title: "Makeup & Style")
+                        lockedSection(title: "Composition & Background")
+                        lockedSection(title: "Quick Wins - Try These Now!")
+                        lockedSection(title: "Foundational Habits")
+                        unlockButton
+                    }
                 }
             }
             .padding()
@@ -104,6 +125,124 @@ struct DetailedFeedbackView: View {
                 loadAnalysis()
             }
         }
+    }
+    
+    // MARK: - Limited Preview
+    
+    private func limitedPreviewSection(_ analysis: PhotoAnalysisVariables) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if let summary = summaryText?.trimmingCharacters(in: .whitespacesAndNewlines), !summary.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("AI Summary (Preview)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.white.opacity(0.7))
+                    Text(summary)
+                        .font(.body.weight(.medium))
+                        .foregroundColor(.white)
+                }
+            }
+            
+            HStack(spacing: 12) {
+                previewMetricCard(
+                    icon: "sparkles",
+                    title: "Glow Score",
+                    value: String(format: "%.1f/10", analysis.overallGlowScore)
+                )
+                if let undertone = analysis.skinUndertone {
+                    previewMetricCard(
+                        icon: "drop.fill",
+                        title: "Undertone",
+                        value: undertone
+                    )
+                } else {
+                    previewMetricCard(
+                        icon: "lightbulb.max",
+                        title: "Lighting",
+                        value: String(format: "%.1f/10", analysis.lightingQuality)
+                    )
+                }
+            }
+        }
+        .padding()
+        .background(Color.white.opacity(0.12))
+        .cornerRadius(24)
+    }
+    
+    private func lockedSection(title: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "lock.fill")
+                    .foregroundColor(.white.opacity(0.8))
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+            }
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.black.opacity(0.25))
+                    .blur(radius: 6)
+                VStack(spacing: 8) {
+                    Text("Locked in Full Analysis")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white.opacity(0.9))
+                    Text("Subscribe to see your personalized insights.")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding()
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 120)
+        }
+        .padding()
+        .background(Color.white.opacity(0.06))
+        .cornerRadius(20)
+    }
+    
+    private var unlockButton: some View {
+        Button {
+            SuperwallService.shared.registerEvent("post_paywall_education")
+        } label: {
+            Text("🔓 Unlock Full Analysis")
+                .font(.headline)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.94, green: 0.34, blue: 0.56),
+                            Color(red: 1.0, green: 0.6, blue: 0.78)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .foregroundColor(.white)
+                .cornerRadius(14)
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
+    }
+    
+    private func previewMetricCard(icon: String, title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .foregroundColor(.white)
+                Text(title.uppercased())
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(.white.opacity(0.6))
+            }
+            Text(value)
+                .font(.headline.weight(.semibold))
+                .foregroundColor(.white)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.black.opacity(0.22))
+        .cornerRadius(14)
     }
     
     private func overviewSection(_ analysis: PhotoAnalysisVariables) -> some View {

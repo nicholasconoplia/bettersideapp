@@ -1,3 +1,67 @@
+import SwiftUI
+
+struct StudioContainerView: View {
+    @EnvironmentObject private var visualizationViewModel: VisualizationViewModel
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+
+    var body: some View {
+        ZStack {
+            TabView {
+                VisualizeView()
+                    .environmentObject(visualizationViewModel)
+                    .tabItem {
+                        Label("Visualize", systemImage: "wand.and.stars.inverse")
+                    }
+                NotesView()
+                    .environmentObject(visualizationViewModel)
+                    .tabItem {
+                        Label("Notes", systemImage: "note.text")
+                    }
+            }
+            .allowsHitTesting(subscriptionManager.isSubscribed)
+
+            if !subscriptionManager.isSubscribed {
+                VStack(spacing: 16) {
+                    Text("Studio (Locked)")
+                        .font(.title2.bold())
+                        .foregroundStyle(.white)
+                    Text("Try on hairstyles, makeup, and outfits powered by your analysis.")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.85))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+
+                    Button {
+                        SuperwallService.shared.registerEvent("subscription_paywall")
+                    } label: {
+                        Text("🔓 Unlock Full Analysis")
+                            .font(.headline)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.94, green: 0.34, blue: 0.56),
+                                        Color(red: 1.0, green: 0.6, blue: 0.78)
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .foregroundColor(.white)
+                            .cornerRadius(14)
+                            .padding(.horizontal)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.vertical, 24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.45))
+                .ignoresSafeArea()
+            }
+        }
+    }
+}
 //
 //  VisualizationComponents.swift
 //  glowup
