@@ -8,7 +8,7 @@
 import SwiftUI
 #if canImport(UIKit)
 import UIKit
-#endif
+#endif // canImport(UIKit)
 
 struct VisualizationSessionView: View {
     @EnvironmentObject private var viewModel: VisualizationViewModel
