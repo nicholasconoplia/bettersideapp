@@ -29,9 +29,11 @@ final class AppModel: ObservableObject {
     @Published var isPresentingQuickActionPaywall = false
     @Published var isGeneratingRoadmap = false
     @Published var navigateToAnalyzeRequested = false
+    @Published private(set) var avatarImageData: Data?
 
     private var cancellables = Set<AnyCancellable>()
     private var shouldMarkOnboardingCompleteAfterBootstrap = false
+    private let avatarDefaultsKey = "glow_avatar_image_data"
 
     private static let roadmapDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -54,6 +56,7 @@ final class AppModel: ObservableObject {
         latestPhotoSession = fetchLatestPhotoSession()
         latestAnalysis = latestPhotoSession?.decodedAnalysis
         hasActiveRoadmap = fetchActiveRoadmapPlan() != nil
+        avatarImageData = UserDefaults.standard.data(forKey: avatarDefaultsKey)
         Task {
             await bootstrap()
         }
@@ -65,6 +68,16 @@ final class AppModel: ObservableObject {
                 self?.handleSubscriptionChange(isSubscribed: value)
             }
             .store(in: &cancellables)
+    }
+    
+    func updateAvatarImage(_ data: Data?) {
+        avatarImageData = data
+        let defaults = UserDefaults.standard
+        if let data {
+            defaults.set(data, forKey: avatarDefaultsKey)
+        } else {
+            defaults.removeObject(forKey: avatarDefaultsKey)
+        }
     }
 
     private func bootstrap() async {

@@ -101,7 +101,8 @@ struct PresetCard: View {
 
                     Spacer()
 
-                    if let swatch = option.swatchHex, let color = Color(hex: swatch) {
+                    if let swatch = option.swatchHex {
+                        let color = Color(hex: swatch)
                         Circle()
                             .fill(color)
                             .frame(width: 22, height: 22)
@@ -163,7 +164,7 @@ struct EditThumbnail: View {
 
 struct PromptInputBar: View {
     @Binding var text: String
-    var placeholder: String = "Describe what you want to try on"
+    var placeholder: String = "Describe the look…"
     let onSubmit: () -> Void
     let isLoading: Bool
 
@@ -171,14 +172,15 @@ struct PromptInputBar: View {
         HStack(spacing: 12) {
             TextField(placeholder, text: $text, axis: .vertical)
                 .textFieldStyle(.plain)
-                .foregroundStyle(.white)
+                .foregroundStyle(GlowPalette.deepRose)
+                .tint(GlowPalette.roseGold)
                 .padding(.vertical, 12)
                 .padding(.horizontal, 14)
-                .background(Color.white.opacity(0.16))
+                .background(GlowPalette.softBeige)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                        .stroke(GlowPalette.roseGold.opacity(0.3), lineWidth: 1)
                 )
 
             Button {
@@ -187,19 +189,19 @@ struct PromptInputBar: View {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(.circular)
-                        .tint(.white)
+                        .tint(GlowPalette.creamyWhite)
                         .frame(width: 26, height: 26)
                 } else {
                     Image(systemName: "paperplane.fill")
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(GlowPalette.creamyWhite)
                 }
             }
             .disabled(isLoading || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(isLoading ? Color.white.opacity(0.16) : Color(red: 0.94, green: 0.34, blue: 0.56))
+                    .fill(GlowPalette.roseGold)
             )
             .opacity(isLoading ? 0.6 : 1)
         }
@@ -207,7 +209,7 @@ struct PromptInputBar: View {
         .padding(.top, 12)
         .padding(.bottom, 18)
         .background(
-            Color(red: 0.11, green: 0.09, blue: 0.2)
+            GlowGradient.canvas
                 .ignoresSafeArea(edges: .bottom)
         )
     }
@@ -221,13 +223,13 @@ struct ImageSourcePicker: View {
     var body: some View {
         VStack(spacing: 20) {
             Capsule()
-                .fill(Color.white.opacity(0.25))
+                .fill(GlowPalette.creamyWhite.opacity(0.35))
                 .frame(width: 40, height: 4)
                 .padding(.top, 10)
 
             Text("Start a Visualization")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(GlowPalette.creamyWhite)
 
             VStack(spacing: 12) {
                 pickerButton(
@@ -257,7 +259,7 @@ struct ImageSourcePicker: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(Color(red: 0.16, green: 0.13, blue: 0.29).opacity(0.95))
+                .fill(GlowPalette.deepRose.opacity(0.95))
         )
         .padding()
     }
@@ -272,29 +274,29 @@ struct ImageSourcePicker: View {
             HStack(spacing: 16) {
                 Image(systemName: icon)
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(GlowPalette.creamyWhite)
                     .frame(width: 48, height: 48)
-                    .background(Color.white.opacity(0.12))
+                    .background(GlowPalette.creamyWhite.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(GlowPalette.creamyWhite)
                     Text(subtitle)
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(GlowPalette.creamyWhite.opacity(0.8))
                         .lineLimit(2)
                 }
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(GlowPalette.creamyWhite.opacity(0.6))
                     .font(.body.weight(.semibold))
             }
             .padding()
-            .background(Color.white.opacity(0.08))
+            .background(GlowPalette.creamyWhite.opacity(0.1))
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -323,21 +325,4 @@ struct LoadingOverlay: View {
     }
 }
 
-private extension Color {
-    init?(hex: String) {
-        var sanitized = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        if sanitized.count == 3 {
-            sanitized = sanitized.map { "\($0)\($0)" }.joined()
-        }
-
-        var int: UInt64 = 0
-        guard Scanner(string: sanitized).scanHexInt64(&int) else {
-            return nil
-        }
-
-        let r = Double((int >> 16) & 0xFF) / 255.0
-        let g = Double((int >> 8) & 0xFF) / 255.0
-        let b = Double(int & 0xFF) / 255.0
-        self = Color(red: r, green: g, blue: b)
-    }
-}
+// Color(hex:) is defined globally in GlowTheme.swift

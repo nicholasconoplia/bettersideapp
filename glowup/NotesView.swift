@@ -32,6 +32,13 @@ struct NotesView: View {
                                     noteCard(note)
                                 }
                                 .buttonStyle(.plain)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        delete(note)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                             }
                         }
                         .padding(.horizontal, 18)
@@ -135,6 +142,17 @@ struct NotesView: View {
         formatter.timeStyle = .short
         return formatter
     }()
+}
+
+extension NotesView {
+    private func delete(_ note: VisualizationNote) {
+        context.delete(note)
+        do {
+            try context.save()
+        } catch {
+            print("[NotesView] Failed to delete note: \(error.localizedDescription)")
+        }
+    }
 }
 
 private struct NoteDetailView: View {

@@ -29,7 +29,7 @@ struct ResultsSheetView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                GradientBackground.primary
+                GlowGradient.canvas
                     .ignoresSafeArea()
 
                 if sessions.isEmpty {
@@ -122,13 +122,11 @@ struct ResultsSheetView: View {
             sessionHeader(for: session)
         }
         .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(0.08))
-        )
+        .background(GlowPalette.softBeige)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                .stroke(GlowPalette.roseGold.opacity(0.25), lineWidth: 1)
         )
     }
 
@@ -158,16 +156,16 @@ struct ResultsSheetView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(dateLabel(for: session))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
 
                 Text(session.sessionType ?? "Static Photo")
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(GlowPalette.deepRose)
 
                 if let summary = session.aiSummary {
                     Text(summary)
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                         .lineLimit(3)
                 }
             }
@@ -179,19 +177,15 @@ struct ResultsSheetView: View {
                 VStack(spacing: 4) {
                     Text("\(Int(confidence * 100))")
                         .font(.title3.weight(.bold))
-                        .foregroundStyle(Color(red: 0.94, green: 0.34, blue: 0.56))
+                        .foregroundStyle(GlowPalette.deepRose)
                     Text("Glow")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.65))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.65))
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(Color.white.opacity(0.12))
+                .background(GlowPalette.blushPink.opacity(0.35))
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
             }
         }
     }

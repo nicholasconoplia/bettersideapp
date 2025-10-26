@@ -28,7 +28,7 @@ struct AnalyzeContainerView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                GradientBackground.primary
+                GlowGradient.canvas
                     .ignoresSafeArea()
                 VStack(spacing: 28) {
                     cameraPreview
@@ -83,30 +83,35 @@ struct AnalyzeContainerView: View {
     }
 
     private var cameraPreview: some View {
-        RoundedRectangle(cornerRadius: 32, style: .continuous)
-            .fill(Color.black.opacity(0.35))
-            .frame(height: 280)
+        RoundedRectangle(cornerRadius: 28, style: .continuous)
+            .fill(GlowPalette.softBeige)
+            .frame(height: 240)
             .overlay {
-                VStack(spacing: 12) {
+                VStack(spacing: 16) {
                     Image(systemName: "camera.aperture")
-                        .font(.system(size: 44))
-                        .foregroundStyle(.white.opacity(0.85))
-                    Text("Upload targeted shots and your coach will break them down.")
-                        .font(.headline)
-                        .foregroundStyle(.white.opacity(0.9))
+                        .font(.system(size: 40))
+                        .foregroundStyle(GlowPalette.deepRose)
+                    Text("Upload or capture photos and we’ll handle the analysis.")
+                        .font(GlowTypography.body(16, weight: .semibold))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
                 }
             }
-            .overlay(
-                RoundedRectangle(cornerRadius: 32)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 1.5)
+            .shadow(
+                color: GlowShadow.soft.color,
+                radius: GlowShadow.soft.radius,
+                x: GlowShadow.soft.x,
+                y: GlowShadow.soft.y
             )
-            .shadow(color: Color.black.opacity(0.15), radius: 20, y: 16)
     }
 
     private var helperText: some View {
         Text("Capture a full face, skin close-up, and eye detail to unlock hyper-specific coaching.")
             .font(.subheadline.weight(.medium))
-            .foregroundStyle(.white.opacity(0.85))
+            .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 20)
     }
 
     private var buttonStack: some View {
@@ -120,17 +125,19 @@ struct AnalyzeContainerView: View {
                     showUploadWizard = true
                 }
             } label: {
-                GlowButton(
-                    title: "Start Glow Scan",
-                    systemImage: "square.stack.3d.up.fill",
-                    background: Color.white.opacity(0.95),
-                    foreground: Color(red: 0.33, green: 0.11, blue: 0.46)
-                )
+                HStack(spacing: 14) {
+                    Image(systemName: "square.stack.3d.up.fill")
+                        .font(.headline)
+                    Text("Start Glow Scan")
+                        .font(GlowTypography.button)
+                }
+                .padding(.horizontal, 20)
             }
+            .glowRoundedButtonBackground(isEnabled: true)
             
             Text("We’ll guide you through three quick uploads so the AI can score facial harmony, skin texture, and eye styling.")
-                .font(.footnote)
-                .foregroundStyle(.white.opacity(0.7))
+                .font(GlowTypography.caption)
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
                 .multilineTextAlignment(.center)
                 .padding(.top, 4)
         }
@@ -144,12 +151,14 @@ struct AnalyzeContainerView: View {
                 Image(systemName: "clock.fill")
                 Text("View Previous Analyses")
             }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.white)
+            .font(GlowTypography.body(15, weight: .semibold))
+            .foregroundStyle(GlowPalette.deepRose)
             .padding()
             .frame(maxWidth: .infinity)
-            .background(Color.white.opacity(0.14))
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(GlowPalette.softBeige.opacity(0.85))
+            )
         }
         .buttonStyle(.plain)
     }
@@ -344,7 +353,7 @@ private struct StructuredPhotoUploadView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Color.white.opacity(0.18))
+            .tint(GlowPalette.roseGold)
             .disabled(isLoadingStage != nil)
             
             Button {
@@ -355,7 +364,7 @@ private struct StructuredPhotoUploadView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Color(red: 0.94, green: 0.34, blue: 0.56).opacity(0.7))
+            .tint(GlowPalette.deepRose)
             .disabled(isLoadingStage != nil)
             
             if data(for: stage) != nil {
@@ -391,13 +400,11 @@ private struct StructuredPhotoUploadView: View {
                         .fontWeight(.semibold)
                 }
                 .font(.subheadline)
-                .foregroundColor(isBundleReady ? Color(red: 0.33, green: 0.11, blue: 0.46) : .white.opacity(0.6))
+                .foregroundStyle(GlowPalette.creamyWhite)
                 .padding()
                 .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(isBundleReady ? Color.white : Color.white.opacity(0.15))
-                )
+                .background(GlowPalette.deepRose)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
             .disabled(!isBundleReady)
             
@@ -548,37 +555,5 @@ private struct CameraCaptureView: UIViewControllerRepresentable {
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             parent.dismiss()
         }
-    }
-}
-
-private struct GlowButton: View {
-    let title: String
-    let systemImage: String
-    let background: Color
-    let foreground: Color
-    var isProcessing: Bool = false
-
-    var body: some View {
-        HStack(spacing: 16) {
-            if isProcessing {
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .tint(foreground)
-            } else {
-                Image(systemName: systemImage)
-                    .font(.headline)
-            }
-            Text(title)
-                .font(.headline)
-            Spacer()
-        }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(background)
-                .shadow(color: background.opacity(0.35), radius: 18, y: 10)
-        )
-        .foregroundStyle(foreground)
     }
 }

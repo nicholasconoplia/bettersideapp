@@ -11,14 +11,15 @@ import UIKit
 #endif
 
 enum GlowTab: Hashable {
-    case home
+    case dashboard
     case analyze
     case roadmap
-    case studio
+    case visualize
+    case diary
 }
 
 struct GlowUpTabView: View {
-    @State private var selection: GlowTab = .home
+    @State private var selection: GlowTab = .dashboard
     @StateObject private var visualizationViewModel = VisualizationViewModel()
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
@@ -30,18 +31,18 @@ struct GlowUpTabView: View {
 
     var body: some View {
         ZStack {
-            GradientBackground.primary
+            GlowGradient.canvas
                 .ignoresSafeArea()
             TabView(selection: $selection) {
-                HomeView(selection: $selection)
+                DashboardView(selection: $selection)
                     .tabItem {
-                        Label("Home", systemImage: "sparkles")
+                        Label("Dashboard", systemImage: "square.grid.2x2.fill")
                     }
-                    .tag(GlowTab.home)
+                    .tag(GlowTab.dashboard)
 
                 AnalyzeContainerView()
                     .tabItem {
-                        Label("Analyze", systemImage: "photo.on.rectangle")
+                        Label("Analyze", systemImage: "camera.aperture")
                     }
                     .tag(GlowTab.analyze)
 
@@ -52,15 +53,29 @@ struct GlowUpTabView: View {
                     .tag(GlowTab.roadmap)
                     .badge(appModel.shouldShowRoadmapBadge() ? "!" : nil)
 
-                StudioContainerView()
+                VisualizeView()
                     .environmentObject(visualizationViewModel)
                     .tabItem {
-                        Label("Studio", systemImage: "wand.and.stars.inverse")
+                        Label("Visualize", systemImage: "wand.and.stars")
                     }
-                    .tag(GlowTab.studio)
+                    .tag(GlowTab.visualize)
+
+                DiaryView()
+                    .tabItem {
+                        Label("Diary", systemImage: "book.closed")
+                    }
+                    .tag(GlowTab.diary)
                     
             }
-            .tint(.white)
+            .tint(GlowPalette.deepRose)
+        }
+        .onChange(of: appModel.navigateToAnalyzeRequested) { go in
+            if go {
+                selection = .analyze
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    appModel.navigateToAnalyzeRequested = false
+                }
+            }
         }
     }
 
@@ -68,15 +83,17 @@ struct GlowUpTabView: View {
         #if canImport(UIKit)
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(red: 0.18, green: 0.16, blue: 0.32, alpha: 0.95)
+        appearance.backgroundColor = UIColor(red: 0.9843, green: 0.9804, blue: 0.9608, alpha: 0.95)
 
-        let normalColor = UIColor(white: 1.0, alpha: 0.55)
-        let selectedColor = UIColor.white
+        let normalColor = UIColor(red: 0.5765, green: 0.3098, blue: 0.3608, alpha: 0.45)
+        let selectedColor = UIColor(red: 0.5765, green: 0.3098, blue: 0.3608, alpha: 1.0)
 
         appearance.stackedLayoutAppearance.normal.iconColor = normalColor
         appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: normalColor]
         appearance.stackedLayoutAppearance.selected.iconColor = selectedColor
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: selectedColor]
+        appearance.inlineLayoutAppearance = appearance.stackedLayoutAppearance
+        appearance.compactInlineLayoutAppearance = appearance.stackedLayoutAppearance
 
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance

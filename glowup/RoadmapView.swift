@@ -17,8 +17,8 @@ struct RoadmapView: View {
 
     private let accentGradient = LinearGradient(
         colors: [
-            Color(red: 0.94, green: 0.34, blue: 0.56),
-            Color(red: 1.0, green: 0.6, blue: 0.78)
+            GlowPalette.blushPink,
+            GlowPalette.roseGold.opacity(0.85)
         ],
         startPoint: .leading,
         endPoint: .trailing
@@ -26,19 +26,19 @@ struct RoadmapView: View {
 
     var body: some View {
         ZStack {
-            GradientBackground.twilightAura
+            GlowGradient.canvas
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 if appModel.isGeneratingRoadmap {
                     VStack(spacing: 16) {
                         ProgressView()
-                            .tint(.white)
+                            .tint(GlowPalette.blushPink)
                             .scaleEffect(1.5)
                         Text("Analyzing your scan and building your Glow Plan ✨")
                             .font(.headline)
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(GlowPalette.deepRose)
                             .padding(.horizontal)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -104,7 +104,7 @@ struct RoadmapView: View {
             VStack(spacing: 20) {
                 Text("Glow Plan (Locked)")
                     .font(.title2.bold())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(GlowPalette.deepRose)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: 12) {
@@ -122,16 +122,13 @@ struct RoadmapView: View {
 
                 ZStack {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(Color.white.opacity(0.06))
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(Color.black.opacity(0.25))
-                        .blur(radius: 6)
+                        .fill(GlowPalette.softBeige)
                     VStack(spacing: 8) {
                         Image(systemName: "lock.fill")
-                            .foregroundStyle(.white.opacity(0.9))
+                            .foregroundStyle(GlowPalette.deepRose)
                         Text("Your personalized Glow Plan is part of Full Analysis")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(GlowPalette.deepRose)
                             .multilineTextAlignment(.center)
                         Button {
                             if hasUsedFreeScan {
@@ -140,24 +137,10 @@ struct RoadmapView: View {
                                 SuperwallService.shared.registerEvent("post_paywall_education")
                             }
                         } label: {
-                            Text("🔓 Unlock Full Analysis")
-                                .font(.headline)
-                                .padding()
+                            Text("Unlock Full Analysis")
                                 .frame(maxWidth: .infinity)
-                                .background(
-                                    LinearGradient(
-                                        colors: [
-                                            Color(red: 0.94, green: 0.34, blue: 0.56),
-                                            Color(red: 1.0, green: 0.6, blue: 0.78)
-                                        ],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .foregroundColor(.white)
-                                .cornerRadius(14)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(GlowPrimaryButtonStyle())
                         .padding(.top, 6)
                     }
                     .padding()
@@ -294,14 +277,14 @@ struct RoadmapView: View {
     private var header: some View {
         let currentWeekNumber = viewModel.weeks.first?.number ?? (viewModel.weeks.last?.number ?? 1)
         return VStack(alignment: .leading, spacing: 16) {
-            Text("Your Personalized Glow Roadmap")
+            Text("My Roadmap")
                 .font(.largeTitle.bold())
-                .foregroundStyle(.white)
+                .foregroundStyle(GlowPalette.deepRose)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Based on your last analysis, these are your top improvement focuses.")
+            Text("Your daily checklist")
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
 
             Text("Tap any card to open the full weekly action plan with step-by-step coaching.")
                 .font(.footnote.weight(.semibold))
@@ -315,27 +298,18 @@ struct RoadmapView: View {
                 HStack {
                     Text("Plan Progress")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.65))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.65))
                     Spacer()
                     Text("\(Int(round(viewModel.overallProgress * 100)))%")
                         .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                 }
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.white.opacity(0.15))
-                        Capsule()
-                            .fill(accentGradient)
-                            .frame(width: max(0, geometry.size.width * CGFloat(viewModel.overallProgress)))
-                    }
-                }
-                .frame(height: 12)
+                GlowProgressBar(value: viewModel.overallProgress)
             }
             .padding(18)
             .background(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color.white.opacity(0.12))
+                    .fill(GlowPalette.softBeige)
             )
         }
     }
