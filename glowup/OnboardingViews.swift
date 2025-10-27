@@ -8,6 +8,7 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import StoreKit
 
 #if canImport(SuperwallKit)
 import SuperwallKit
@@ -47,6 +48,9 @@ struct OnboardingFlowView: View {
                 PlanLoadingStepView()
                     .tag(OnboardingExperienceViewModel.Step.loading)
 
+                GlowPromiseStepView()
+                    .tag(OnboardingExperienceViewModel.Step.glowPromise)
+
                 ValueComparisonStepView()
                     .tag(OnboardingExperienceViewModel.Step.valueComparison)
 
@@ -85,6 +89,7 @@ final class OnboardingExperienceViewModel: ObservableObject {
         case summary
         case name
         case loading
+        case glowPromise
         case valueComparison
         case socialProof
         case faceScan
@@ -582,17 +587,24 @@ private struct LifestyleInputsStepView: View {
             primaryTitle: "Continue",
             primaryEnabled: flowModel.hasAdjustedSleep && flowModel.confidenceLevel != nil,
             onPrimary: { flowModel.goToNextStep() },
-            layout: .center
+            layout: .center,
+            additionalBottomPadding: 32
         ) {
-            VStack(spacing: 32) {
-                VStack(spacing: 16) {
-                    Text("Average hours of sleep per night")
-                        .font(GlowTypography.body(16, weight: .semibold))
-                        .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
-                        .multilineTextAlignment(.center)
+            VStack {
+                Spacer(minLength: 0)
 
-                    CircularSleepSlider(value: sleepBinding, range: 3...10)
+                VStack(alignment: .center, spacing: 32) {
+                    VStack(spacing: 16) {
+                        Text("Average hours of sleep per night")
+                            .font(GlowTypography.body(16, weight: .semibold))
+                            .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
+                            .multilineTextAlignment(.center)
+
+                        CircularSleepSlider(value: sleepBinding, range: 3...10)
+                            .frame(width: 260, height: 260)
+                            .frame(maxWidth: .infinity)
                 }
+                .frame(maxWidth: .infinity)
 
                 VStack(spacing: 16) {
                     Text("Current confidence level")
@@ -605,15 +617,23 @@ private struct LifestyleInputsStepView: View {
                         options: OnboardingExperienceViewModel.ConfidenceLevel.allCases,
                         onSelect: { flowModel.confidenceLevel = $0 }
                     )
+                    .frame(maxWidth: .infinity)
                 }
+                .frame(maxWidth: .infinity)
             }
             .frame(maxWidth: .infinity)
+
+                Spacer(minLength: 0)
+            }
         }
     }
 }
 
 private struct SummaryConfirmationStepView: View {
     @EnvironmentObject private var flowModel: OnboardingExperienceViewModel
+    @State private var showPulse = false
+    @State private var visibleIndices: Set<Int> = []
+    @State private var animationTask: Task<Void, Never>?
 
     var body: some View {
         GlowOnboardingScreen(
@@ -621,21 +641,56 @@ private struct SummaryConfirmationStepView: View {
             subtitle: "You can update this later in Profile. We’ll confirm your name next.",
             primaryTitle: "Generate my plan",
             primaryEnabled: true,
-            onPrimary: { flowModel.goToNextStep() }
+            onPrimary: { flowModel.goToNextStep() },
+            primaryButtonPulse: showPulse
         ) {
-            let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(Array(flowModel.summaryItems.enumerated()), id: \.offset) { index, item in
+                    SummaryDetailRow(
+                        item: item,
+                        isVisible: visibleIndices.contains(index)
+                    )
+                }
+            }
+        }
+        .onAppear {
+            resetAnimations()
+        }
+        .onDisappear {
+            animationTask?.cancel()
+            animationTask = nil
+        }
+    }
 
-            ViewThatFits {
-                LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(flowModel.summaryItems) { item in
-                        SummaryCardView(item: item)
+    private func resetAnimations() {
+        visibleIndices.removeAll()
+        showPulse = false
+        animationTask?.cancel()
+
+        let items = flowModel.summaryItems
+        guard !items.isEmpty else { return }
+
+        animationTask = Task {
+            let baseDelay: Double = 0.12
+            for (index, _) in items.enumerated() {
+                try? await Task.sleep(nanoseconds: UInt64((baseDelay * Double(index)) * 1_000_000_000))
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        visibleIndices.insert(index)
                     }
                 }
+            }
 
-                VStack(spacing: 16) {
-                    ForEach(flowModel.summaryItems) { item in
-                        SummaryCardView(item: item)
-                    }
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showPulse = true
+                }
+            }
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showPulse = false
                 }
             }
         }
@@ -691,7 +746,7 @@ private struct PlanLoadingStepView: View {
                         HStack(spacing: 12) {
                             Image(systemName: flowModel.completedChecklistIndices.contains(index) ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(flowModel.completedChecklistIndices.contains(index) ? GlowPalette.blushPink : GlowPalette.roseGold.opacity(0.4))
-                                .font(.title3)
+                                .font(.glowHeading)
                                 .animation(.easeInOut(duration: 0.35), value: flowModel.completedChecklistIndices)
 
                             Text(title)
@@ -721,12 +776,144 @@ private struct PlanLoadingStepView: View {
     }
 }
 
-private struct ValueComparisonStepView: View {
+private struct GlowPromiseStepView: View {
     @EnvironmentObject private var flowModel: OnboardingExperienceViewModel
+    @State private var strokes: [SignatureStroke] = []
+    @State private var currentStroke = SignatureStroke(points: [])
+
+    private let commitments = [
+        "I’ll nurture my glow with daily consistency.",
+        "I’ll treat my routines as a promise to future me.",
+        "I’ll be kind to myself when progress feels slow.",
+        "I’ll celebrate every small win along the way.",
+        "I’ll show up even when the mirror feels intimidating."
+    ]
 
     var body: some View {
         GlowOnboardingScreen(
-            title: "Consistency creates results.",
+            title: "Let’s make a Glow promise",
+            subtitle: "A little commitment keeps motivation bright.",
+            primaryTitle: "I’m in",
+            primaryEnabled: hasSignature,
+            secondaryTitle: hasSignature ? "Reset signature" : nil,
+            onPrimary: { flowModel.goToNextStep() },
+            onSecondary: hasSignature ? { resetSignature() } : nil,
+            layout: .leading,
+            isContentScrollable: true
+        ) {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Image(systemName: "sparkling.heart.fill")
+                        .font(.system(size: 32, weight: .semibold))
+                        .foregroundStyle(GlowPalette.blushPink, GlowPalette.deepRose)
+
+                    Text("I commit to:")
+                        .font(GlowTypography.body(17, weight: .semibold))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(commitments, id: \.self) { statement in
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: "sparkle")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(GlowPalette.roseGold.opacity(0.9))
+                                    .padding(.top, 4)
+                                Text(statement)
+                                    .font(GlowTypography.body(15))
+                                    .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Sign with your fingertip")
+                        .font(GlowTypography.body(15, weight: .semibold))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
+
+                    SignaturePad(strokes: $strokes, currentStroke: $currentStroke)
+                        .frame(height: 180)
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .stroke(GlowPalette.roseGold.opacity(0.35), lineWidth: 1.2)
+                        )
+
+                    Text("Your signature is for accountability only and isn’t stored.")
+                        .font(GlowTypography.caption)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.5))
+                }
+            }
+            .padding(.bottom, 12)
+        }
+    }
+
+    private var hasSignature: Bool {
+        strokes.contains { $0.points.count > 1 } || currentStroke.points.count > 1
+    }
+
+    private func resetSignature() {
+        strokes.removeAll()
+        currentStroke = SignatureStroke(points: [])
+#if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+#endif
+    }
+}
+
+private struct ValueComparisonStepView: View {
+    @EnvironmentObject private var flowModel: OnboardingExperienceViewModel
+    @State private var showBenefits = false
+
+    private struct AnimatedRow: View {
+        let text: String
+        let delay: Double
+        let isPositive: Bool
+
+        @State private var isVisible = false
+
+        var body: some View {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: isPositive ? "sparkles" : "exclamationmark.triangle")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(isPositive ? GlowPalette.deepRose : GlowPalette.roseGold)
+                Text(text)
+                    .font(.glowBody)
+                    .foregroundStyle(GlowPalette.deepRose)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(1)
+                Spacer()
+            }
+            .padding(.vertical, 10)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(isPositive ? GlowPalette.blushPink.opacity(0.4) : GlowPalette.softBeige.opacity(0.92))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: GlowPalette.deepRose.opacity(0.1), radius: 10, x: 0, y: 4)
+            .opacity(isVisible ? 1 : 0)
+            .offset(y: isVisible ? 0 : 12)
+            .transition(.opacity.combined(with: .slide))
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        isVisible = true
+#if canImport(UIKit)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+#endif
+                    }
+                }
+            }
+        }
+    }
+
+    var body: some View {
+        GlowOnboardingScreen(
+            title: "When your routine feels inconsistent…",
             subtitle: nil,
             primaryTitle: "View my Glow map",
             primaryEnabled: true,
@@ -735,54 +922,79 @@ private struct ValueComparisonStepView: View {
             onSecondary: {
                 flowModel.markLimitedMode()
                 flowModel.goToNextStep()
-            }
+            },
+            layout: .leading,
+            isContentScrollable: true
         ) {
-            ViewThatFits {
-                HStack(spacing: 16) {
-                    ValueComparisonCard(
-                        title: "Unstructured Routine",
-                        bulletPoints: [
-                            "Inconsistent steps",
-                            "Overwhelming choices",
-                            "No tracking"
-                        ],
-                        isProminent: false
-                    )
-                    .frame(maxWidth: .infinity)
+            VStack(alignment: .leading, spacing: 14) {
+                animatedPainPoints
 
-                    ValueComparisonCard(
-                        title: "GlowUp Guided Plan",
-                        bulletPoints: [
-                            "Daily checklist",
-                            "Measurable progress",
-                            "Adaptive insights"
-                        ],
-                        isProminent: true
-                    )
-                    .frame(maxWidth: .infinity)
+                if animatedPainPointsAppeared {
+                    Text("That’s where GlowUp comes in.")
+                        .font(.glowSubheading)
+                        .foregroundStyle(GlowPalette.deepRose)
+                        .padding(.top, 12)
+                        .opacity(showBenefits ? 1 : 0)
+                        .transition(.opacity.combined(with: .slide))
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                withAnimation(.easeInOut(duration: 0.4)) {
+                                    showBenefits = true
+                                }
+                            }
+                        }
                 }
 
-                VStack(spacing: 16) {
-                    ValueComparisonCard(
-                        title: "Unstructured Routine",
-                        bulletPoints: [
-                            "Inconsistent steps",
-                            "Overwhelming choices",
-                            "No tracking"
-                        ],
-                        isProminent: false
-                    )
-
-                    ValueComparisonCard(
-                        title: "GlowUp Guided Plan",
-                        bulletPoints: [
-                            "Daily checklist",
-                            "Measurable progress",
-                            "Adaptive insights"
-                        ],
-                        isProminent: true
-                    )
+                if showBenefits {
+                    VStack(alignment: .leading, spacing: 14) {
+                        ForEach(Array(benefitLines.enumerated()), id: \.offset) { index, line in
+                            AnimatedRow(
+                                text: line,
+                                delay: 0.1 * Double(index),
+                                isPositive: true
+                            )
+                        }
+                    }
+                    .transition(.opacity.combined(with: .slide))
                 }
+            }
+            .onAppear {
+                animatedPainPointsAppeared = true
+                showBenefits = false
+            }
+            .padding(.bottom, 8)
+        }
+    }
+
+    @State private var animatedPainPointsAppeared = false
+
+    private var painPointLines: [String] {
+        [
+            "You question whether you actually look as good as you think.",
+            "You overthink your reflection before going out.",
+            "You feel unsure about what makeup, outfit, or style really suits you.",
+            "You lose confidence when others seem effortlessly put together.",
+            "And deep down, you wish there was a plan that guided you."
+        ]
+    }
+
+    private var benefitLines: [String] {
+        [
+            "Your personalized Glow Map gives you daily structure.",
+            "You’ll know exactly what steps to take to look and feel your best.",
+            "See measurable progress — and feel it too.",
+            "Finally, confidence won’t depend on the mirror."
+        ]
+    }
+
+    private var animatedPainPoints: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(Array(painPointLines.enumerated()), id: \.offset) { index, line in
+                AnimatedRow(
+                    text: line,
+                    delay: 0.15 * Double(index),
+                    isPositive: false
+                )
             }
         }
     }
@@ -815,7 +1027,7 @@ private struct SocialProofStepView: View {
                 }
 
                 Button {
-                    SuperwallService.shared.registerEvent("onboarding_review_intent")
+                    requestReview()
                 } label: {
                     Text("Share your story")
                         .font(GlowTypography.button)
@@ -824,6 +1036,16 @@ private struct SocialProofStepView: View {
                 .glowSecondaryButtonBackground()
             }
         }
+    }
+
+    private func requestReview() {
+#if canImport(UIKit)
+        SuperwallService.shared.registerEvent("onboarding_review_intent")
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }) else { return }
+        SKStoreReviewController.requestReview(in: scene)
+#endif
     }
 }
 
@@ -937,7 +1159,7 @@ private struct FinalCallToActionStepView: View {
             subtitle: "Your daily roadmap includes guided skincare, routines, and progress tracking.",
             primaryTitle: "Continue",
             primaryEnabled: true,
-            secondaryTitle: "Try limited version",
+            secondaryTitle: "Explore the app First",
             onPrimary: { presentSubscriptionPaywall() },
             onSecondary: {
                 flowModel.markLimitedMode()
@@ -984,6 +1206,9 @@ private struct GlowOnboardingScreen<Content: View>: View {
     let onPrimary: () -> Void
     let onSecondary: (() -> Void)?
     let layout: Layout
+    let primaryButtonPulse: Bool
+    let additionalBottomPadding: CGFloat
+    let isContentScrollable: Bool
     let content: Content
 
     init(
@@ -995,6 +1220,9 @@ private struct GlowOnboardingScreen<Content: View>: View {
         onPrimary: @escaping () -> Void,
         onSecondary: (() -> Void)? = nil,
         layout: Layout = .leading,
+        primaryButtonPulse: Bool = false,
+        additionalBottomPadding: CGFloat = 0,
+        isContentScrollable: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
@@ -1005,6 +1233,9 @@ private struct GlowOnboardingScreen<Content: View>: View {
         self.onPrimary = onPrimary
         self.onSecondary = onSecondary
         self.layout = layout
+        self.primaryButtonPulse = primaryButtonPulse
+        self.additionalBottomPadding = additionalBottomPadding
+        self.isContentScrollable = isContentScrollable
         self.content = content()
     }
 
@@ -1025,12 +1256,21 @@ private struct GlowOnboardingScreen<Content: View>: View {
                         .font(GlowTypography.body(16))
                         .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                         .multilineTextAlignment(textAlignment)
-                        .frame(maxWidth: .infinity, alignment: layout == .leading ? .leading : .center)
+                    .frame(maxWidth: .infinity, alignment: layout == .leading ? .leading : .center)
                 }
             }
 
-            content
-                .frame(maxWidth: .infinity, alignment: layout == .leading ? .leading : .center)
+            if isContentScrollable {
+                ScrollView(showsIndicators: false) {
+                    content
+                        .frame(maxWidth: .infinity, alignment: layout == .leading ? .leading : .center)
+                        .padding(.vertical, 4)
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                content
+                    .frame(maxWidth: .infinity, alignment: layout == .leading ? .leading : .center)
+            }
 
             Spacer(minLength: 16)
 
@@ -1044,9 +1284,12 @@ private struct GlowOnboardingScreen<Content: View>: View {
             }
 
             Button(action: onPrimary) {
+                let shouldPulse = primaryButtonPulse && primaryEnabled
                 Text(primaryTitle)
                     .font(GlowTypography.button)
                     .frame(maxWidth: .infinity)
+                    .scaleEffect(shouldPulse ? 1.05 : 1.0)
+                    .animation(.easeInOut(duration: 0.25), value: shouldPulse)
             }
             .glowRoundedButtonBackground(isEnabled: primaryEnabled)
             .disabled(!primaryEnabled)
@@ -1054,6 +1297,7 @@ private struct GlowOnboardingScreen<Content: View>: View {
         .padding(.horizontal, 24)
         .padding(.vertical, 32)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: frameAlignment)
+        .padding(.bottom, additionalBottomPadding)
     }
 }
 
@@ -1065,15 +1309,19 @@ private struct OnboardingSelectableRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(alignment: .center, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(GlowTypography.body(16, weight: .semibold))
                         .foregroundStyle(GlowPalette.deepRose)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                     if let subtitle {
                         Text(subtitle)
                             .font(GlowTypography.caption)
                             .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Spacer()
@@ -1221,9 +1469,120 @@ private struct SummaryCardView: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(GlowPalette.softBeige)
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(GlowPalette.roseStroke(0.3), lineWidth: 1)
+        )
         .frame(maxWidth: .infinity, minHeight: 110, alignment: .leading)
     }
 }
+
+private struct SummaryDetailRow: View {
+    let item: OnboardingExperienceViewModel.SummaryItem
+    let isVisible: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(item.title)
+                .font(GlowTypography.body(13, weight: .semibold))
+                .foregroundStyle(GlowPalette.roseGold.opacity(0.8))
+            Text(item.value)
+                .font(GlowTypography.body(18, weight: .semibold))
+                .foregroundStyle(GlowPalette.deepRose)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            LinearGradient(
+                colors: [
+                    GlowPalette.softBeige.opacity(0.9),
+                    GlowPalette.creamyWhite.opacity(0.92)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: GlowPalette.deepRose.opacity(0.08), radius: 10, x: 0, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(GlowPalette.roseGold.opacity(0.28), lineWidth: 1)
+        )
+        .opacity(isVisible ? 1 : 0)
+        .offset(y: isVisible ? 0 : 12)
+        .transition(.opacity.combined(with: .slide))
+    }
+}
+
+private struct SignatureStroke: Identifiable, Equatable {
+    let id = UUID()
+    var points: [CGPoint]
+}
+
+private struct SignaturePad: View {
+    @Binding var strokes: [SignatureStroke]
+    @Binding var currentStroke: SignatureStroke
+
+    var body: some View {
+        GeometryReader { proxy in
+            let size = proxy.size
+
+            ZStack {
+                Rectangle()
+                    .fill(GlowPalette.creamyWhite.opacity(0.55))
+
+                Path { path in
+                    for stroke in strokes where stroke.points.count > 1 {
+                        path.addLines(stroke.points)
+                    }
+                }
+                .stroke(GlowPalette.deepRose.opacity(0.75), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+
+                Path { path in
+                    guard currentStroke.points.count > 1 else { return }
+                    path.addLines(currentStroke.points)
+                }
+                .stroke(GlowPalette.roseGold.opacity(0.9), style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+
+                if strokes.isEmpty && currentStroke.points.isEmpty {
+                    Text("Draw your signature here")
+                        .font(GlowTypography.body(14))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.45))
+                        .padding(.top, 12)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 0.1)
+                    .onChanged { value in
+                        let point = clamp(value.location, in: size)
+                        if currentStroke.points.isEmpty {
+                            currentStroke = SignatureStroke(points: [point])
+                        } else {
+                            currentStroke.points.append(point)
+                        }
+                    }
+                    .onEnded { _ in
+                        if currentStroke.points.count > 1 {
+                            strokes.append(currentStroke)
+                        }
+                        currentStroke = SignatureStroke(points: [])
+                    }
+            )
+        }
+        .background(GlowPalette.creamyWhite.opacity(0.35))
+    }
+
+    private func clamp(_ location: CGPoint, in size: CGSize) -> CGPoint {
+        CGPoint(
+            x: min(max(location.x, 0), size.width),
+            y: min(max(location.y, 0), size.height)
+        )
+    }
+}
+
 
 private struct ValueComparisonCard: View {
     let title: String
