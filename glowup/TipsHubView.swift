@@ -92,10 +92,10 @@ struct TipsHubView: View {
                         if isRefreshing {
                             ProgressView()
                                 .progressViewStyle(.circular)
-                                .tint(.white)
+                                .tint(GlowPalette.deepRose)
                         } else {
                             Image(systemName: "arrow.clockwise")
-                                .foregroundStyle(.white)
+                                .deepRoseText()
                         }
                     }
                 }
@@ -116,7 +116,7 @@ struct TipsHubView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.white.opacity(0.12))
+                .fill(GlowPalette.deepRose.opacity(0.12))
         )
         .padding(.horizontal)
     }
@@ -124,11 +124,11 @@ struct TipsHubView: View {
     private func tipCard(_ tip: TipEntry) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(tip.title ?? "Glow Tip")
-                .font(.headline)
-                .foregroundStyle(.white)
+                .font(.glowSubheading)
+                .deepRoseText()
             Text(tip.body ?? "")
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.85))
+                .font(.glowBody)
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
             if let action = matchingAction(for: tip), !action.relatedQueries.isEmpty {
                 queryChipStack(action.relatedQueries)
             }
@@ -143,17 +143,21 @@ struct TipsHubView: View {
                     )
                     .font(.footnote.weight(.semibold))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.white.opacity(0.2))
+                .buttonStyle(GlowFilledButtonStyle())
+                .tint(GlowPalette.creamyWhite.opacity(0.2))
 
                 Spacer()
 
                 Button {
                     UIPasteboard.general.string = tip.body ?? ""
                 } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.8))
+                    Label {
+                        Text("Copy")
+                            .font(GlowTypography.glowCaption.weight(.semibold))
+                    } icon: {
+                        Image(systemName: "doc.on.doc")
+                    }
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
                 }
             }
         }
@@ -167,11 +171,11 @@ struct TipsHubView: View {
     private func actionTipPreviewCard(_ tip: AppearanceActionTip) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(tip.title)
-                .font(.headline)
-                .foregroundColor(.white)
+                .font(.glowSubheading)
+                .deepRoseText()
             Text(tip.body)
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.85))
+                .font(.glowBody)
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
             if !tip.relatedQueries.isEmpty {
                 queryChipStack(tip.relatedQueries)
             }
@@ -196,10 +200,10 @@ struct TipsHubView: View {
             HStack(spacing: 8) {
                 ForEach(queries, id: \.self) { query in
                     Text(query.capitalized)
-                        .font(.caption.weight(.semibold))
+                        .font(GlowTypography.glowCaption.weight(.semibold))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(Color.white.opacity(0.12))
+                        .background(GlowPalette.deepRose.opacity(0.12))
                         .cornerRadius(12)
                 }
             }
@@ -210,30 +214,30 @@ struct TipsHubView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "person.3.sequence")
-                    .foregroundColor(.purple)
+                    .foregroundStyle(GlowPalette.roseGold)
                 Text("Celebrity Vibe Matches")
-                    .font(.headline)
-                    .foregroundColor(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             ForEach(vibeMatches) { match in
                 VStack(alignment: .leading, spacing: 10) {
                     Text(match.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.white)
+                        .font(.glowBody.weight(.semibold))
+                        .deepRoseText()
                     Text(match.descriptor)
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
+                        .font(GlowTypography.glowCaption)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                     Text(match.whyItWorks)
-                        .font(.footnote)
-                        .foregroundColor(.white.opacity(0.85))
+                        .font(GlowTypography.glowCaption)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                 }
                 .padding()
-                .background(Color.white.opacity(0.08))
+                .background(GlowPalette.deepRose.opacity(0.08))
                 .cornerRadius(18)
             }
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.deepRose.opacity(0.08))
         .cornerRadius(20)
     }
 
@@ -241,10 +245,10 @@ struct TipsHubView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "safari")
-                    .foregroundColor(.mint)
+                    .foregroundStyle(GlowPalette.roseGold)
                 Text("Pinterest Search Generator")
-                    .font(.headline)
-                    .foregroundColor(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             VStack(spacing: 12) {
                 ForEach(pinterestIdeas) { idea in
@@ -253,33 +257,41 @@ struct TipsHubView: View {
             }
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.deepRose.opacity(0.08))
         .cornerRadius(20)
     }
 
     private func pinterestIdeaCard(_ idea: PinterestSearchIdea) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(idea.label)
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(.white)
+                .font(.glowBody.weight(.semibold))
+                .deepRoseText()
             HStack(spacing: 12) {
                 Button {
                     UIPasteboard.general.string = idea.query
                 } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
-                        .font(.caption.weight(.semibold))
+                    Label {
+                        Text("Copy")
+                            .font(GlowTypography.glowCaption.weight(.semibold))
+                    } icon: {
+                        Image(systemName: "doc.on.doc")
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.white.opacity(0.18))
+                .buttonStyle(GlowFilledButtonStyle())
+                .tint(GlowPalette.creamyWhite.opacity(0.18))
 
                 if let url = idea.encodedURL {
                     Button {
                         openURL(url)
                     } label: {
-                        Label("Open in Pinterest", systemImage: "arrow.up.right")
-                            .font(.caption.weight(.semibold))
+                        Label {
+                            Text("Open in Pinterest")
+                                .font(GlowTypography.glowCaption.weight(.semibold))
+                        } icon: {
+                            Image(systemName: "arrow.up.right")
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(GlowFilledButtonStyle())
                     .tint(Color(red: 0.94, green: 0.34, blue: 0.56).opacity(0.6))
                 }
             }
@@ -293,10 +305,10 @@ struct TipsHubView: View {
         VStack(spacing: 12) {
             Image(systemName: "sparkles")
                 .font(.largeTitle)
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
             Text("Tap refresh to generate your \(selectedMode == .shortTerm ? "daily" : "long-term") glow plan.")
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(.white.opacity(0.8))
+                .font(.glowBody.weight(.medium))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)

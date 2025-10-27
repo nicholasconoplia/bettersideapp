@@ -124,6 +124,34 @@ final class AppModel: ObservableObject {
         persistenceController.saveIfNeeded()
     }
 
+    func updateUserName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let finalName = trimmed.isEmpty ? nil : trimmed
+        let context = persistenceController.viewContext
+
+        if let quiz = latestQuiz ?? fetchLatestQuiz() {
+            quiz.setValue(finalName, forKey: "userName")
+            latestQuiz = quiz
+            objectWillChange.send()
+            persistenceController.saveIfNeeded(context)
+            return
+        }
+
+        guard let finalName else {
+            latestQuiz = nil
+            objectWillChange.send()
+            return
+        }
+
+        let quiz = OnboardingQuiz(context: context)
+        quiz.answers = [:] as NSDictionary
+        quiz.createdAt = Date()
+        quiz.setValue(finalName, forKey: "userName")
+        latestQuiz = quiz
+        objectWillChange.send()
+        persistenceController.saveIfNeeded(context)
+    }
+
     func saveQuizResult(_ result: QuizResult) {
         let context = persistenceController.viewContext
         let quiz = OnboardingQuiz(context: context)

@@ -8,9 +8,14 @@
 import SwiftUI
 
 struct RoadmapWeekCard: View {
+    enum LockReason {
+        case future
+        case subscription
+    }
+
     let week: RoadmapViewModel.Week
     let onOpenDetail: () -> Void
-    let onLockedTap: () -> Void
+    let onLockedTap: (LockReason) -> Void
 
     private let accentColor = Color(red: 0.94, green: 0.34, blue: 0.56)
     private let gradient = LinearGradient(
@@ -23,14 +28,16 @@ struct RoadmapWeekCard: View {
     )
 
     var body: some View {
-        let isLocked = week.subscriptionLocked || !week.isUnlocked
+        let futureLocked = !week.isUnlocked
+        let subscriptionLocked = week.subscriptionLocked
+        let isLocked = futureLocked || subscriptionLocked
 
         VStack(alignment: .leading, spacing: 20) {
             header
 
             Text(week.summary)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white.opacity(0.78))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.78))
 
             if week.isUnlocked && !week.tasks.isEmpty {
                 highlightList
@@ -50,12 +57,12 @@ struct RoadmapWeekCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(week.isCurrent ? 0.2 : 0.12))
+                .fill(GlowPalette.softOverlay(week.isCurrent ? 0.9 : 0.82))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(
-                    week.isCurrent ? AnyShapeStyle(gradient) : AnyShapeStyle(Color.white.opacity(week.isCompleted ? 0.18 : 0.08)),
+                    week.isCurrent ? AnyShapeStyle(gradient) : AnyShapeStyle(GlowPalette.roseStroke(week.isCompleted ? 0.45 : 0.25)),
                     lineWidth: week.isCurrent ? 2 : 1
                 )
         )
@@ -63,7 +70,7 @@ struct RoadmapWeekCard: View {
             if week.isCompleted {
                 Label("Completed", systemImage: "checkmark.seal.fill")
                     .font(.caption.bold())
-                    .foregroundStyle(.white)
+                    .deepRoseText()
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(
@@ -74,20 +81,20 @@ struct RoadmapWeekCard: View {
             } else if !week.isUnlocked || week.subscriptionLocked {
                 Image(systemName: week.subscriptionLocked ? "crown.fill" : "lock.fill")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
                     .padding(14)
             }
         }
         .overlay(alignment: .bottomTrailing) {
             Image(systemName: "chevron.right.circle.fill")
                 .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.65))
                 .padding(18)
         }
         .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .onTapGesture {
             if isLocked {
-                onLockedTap()
+                onLockedTap(subscriptionLocked ? .subscription : .future)
             } else {
                 onOpenDetail()
             }
@@ -100,24 +107,24 @@ struct RoadmapWeekCard: View {
                 HStack(spacing: 8) {
                     Text("Week \(week.number)")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                     if week.isCurrent {
                         Text("Current focus")
                             .font(.caption2.weight(.bold))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
-                            .background(Color.white.opacity(0.16))
+                            .background(GlowPalette.creamyWhite.opacity(0.16))
                             .clipShape(Capsule())
                     }
                 }
                 Text(week.title)
                     .font(.title3.bold())
-                    .foregroundStyle(.white)
+                    .deepRoseText()
             }
             Spacer()
             Text("\(Int(round(week.progress * 100)))%")
                 .font(.caption.bold())
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
         }
     }
 
@@ -126,16 +133,16 @@ struct RoadmapWeekCard: View {
             HStack {
                 Text("Progress")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.65))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.65))
                 Spacer()
                 Text("\(Int(round(week.progress * 100)))%")
                     .font(.footnote.bold())
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
             }
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.white.opacity(0.12))
+                        .fill(GlowPalette.creamyWhite.opacity(0.12))
                     Capsule()
                         .fill(gradient)
                         .frame(width: max(0, geometry.size.width * min(1, CGFloat(week.progress))))
@@ -151,22 +158,22 @@ struct RoadmapWeekCard: View {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(task.isCompleted ? accentColor : Color.white.opacity(0.5))
+                        .foregroundStyle(task.isCompleted ? accentColor : GlowPalette.creamyWhite.opacity(0.5))
                         .padding(.top, 2)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(task.title)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .deepRoseText()
                         Text(task.timeframe)
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.6))
+                            .font(.glowBody)
+                            .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
                     }
                 }
             }
             if week.tasks.count > 2 {
                 Text("+ \(week.tasks.count - 2) more actions inside →")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.65))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.65))
             }
         }
     }
@@ -174,14 +181,14 @@ struct RoadmapWeekCard: View {
     private func lockBanner(message: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: week.subscriptionLocked ? "crown.fill" : "lock.fill")
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
             Text(message)
                 .font(.footnote.weight(.medium))
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 14)
-        .background(Color.white.opacity(0.12))
+        .background(GlowPalette.creamyWhite.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
@@ -192,10 +199,14 @@ struct RoadmapWeekCard: View {
             Text(isLocked ? "Unlock to view the detailed plan" : "Tap to open this week's action plan")
                 .font(.subheadline.weight(.semibold))
         }
-        .foregroundStyle(.white.opacity(0.85))
+        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .background(Color.white.opacity(0.1))
+        .background(GlowPalette.softOverlay(0.85))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(GlowPalette.roseStroke(0.25), lineWidth: 1)
+        )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }

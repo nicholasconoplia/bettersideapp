@@ -50,10 +50,10 @@ struct NotesView: View {
             .navigationTitle("Notes")
             .navigationDestination(for: NSManagedObjectID.self) { objectID in
                 if let note = fetchNote(with: objectID) {
-                    NoteDetailView(note: note)
+                    VisualizationNoteDetailView(note: note)
                 } else {
                     Text("Note not found.")
-                        .foregroundStyle(.white)
+                        .deepRoseText()
                 }
             }
         }
@@ -76,46 +76,46 @@ struct NotesView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            .stroke(GlowPalette.deepRose.opacity(0.18), lineWidth: 1)
                     )
                     .shadow(color: .black.opacity(0.25), radius: 10, y: 8)
             }
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(note.summary ?? "Favorite Look")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
 
                 Text(note.detail ?? "")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.7))
+                    .font(.glowBody)
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
 
                 HStack(spacing: 8) {
                     Label(note.lookCategory.displayName, systemImage: "tag.fill")
-                        .font(.caption.weight(.semibold))
+                        .font(GlowTypography.glowCaption.weight(.semibold))
                         .padding(.vertical, 4)
                         .padding(.horizontal, 8)
-                        .background(Color.white.opacity(0.12))
+                        .background(GlowPalette.deepRose.opacity(0.12))
                         .clipShape(Capsule())
 
                     Text((note.createdAt ?? Date()), formatter: Self.noteDateFormatter)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.55))
+                        .font(GlowTypography.glowCaption)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.55))
                 }
             }
 
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.45))
+                .font(.glowSubheading.weight(.semibold))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.45))
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.deepRose.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                .stroke(GlowPalette.deepRose.opacity(0.06), lineWidth: 1)
         )
     }
 
@@ -123,14 +123,14 @@ struct NotesView: View {
         VStack(spacing: 20) {
             Image(systemName: "heart.text.square")
                 .font(.system(size: 58))
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
             Text("Save Your Favorites")
-                .font(.title2.bold())
-                .foregroundStyle(.white)
+                .font(.glowHeading.bold())
+                .deepRoseText()
             Text("Tap \"I Like This Look\" in Visualize to pin detailed instructions, pro-ready notes, and image references right here.")
-                .font(.body)
+                .font(.glowBody)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                 .padding(.horizontal, 32)
         }
         .padding(.bottom, 80)
@@ -155,7 +155,7 @@ extension NotesView {
     }
 }
 
-private struct NoteDetailView: View {
+struct VisualizationNoteDetailView: View {
     let note: VisualizationNote
 
     var body: some View {
@@ -168,33 +168,33 @@ private struct NoteDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                                .stroke(GlowPalette.creamyWhite.opacity(0.16), lineWidth: 1)
                         )
                         .shadow(color: .black.opacity(0.35), radius: 22, y: 14)
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
                     Label("Professional Brief", systemImage: "doc.richtext")
-                        .font(.headline)
-                        .foregroundStyle(.white)
+                        .font(.glowSubheading)
+                        .deepRoseText()
                     Text(note.detail ?? "")
-                        .font(.body)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .font(.glowBody)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                         .multilineTextAlignment(.leading)
                 }
                 .padding()
-                .background(Color.white.opacity(0.08))
+                .background(GlowPalette.creamyWhite.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
 
                 if !note.keywordList.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Label("Pinterest Keywords", systemImage: "sparkles.tv.fill")
-                            .font(.headline)
-                            .foregroundStyle(.white)
+                            .font(.glowSubheading)
+                            .deepRoseText()
                         FlexibleKeywordGrid(keywords: note.keywordList)
                     }
                     .padding()
-                    .background(Color.white.opacity(0.08))
+                    .background(GlowPalette.creamyWhite.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 }
             }
@@ -217,20 +217,20 @@ private struct FlexibleKeywordGrid: View {
                     Link(destination: url) {
                         Text(keyword)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .deepRoseText()
                             .padding(.vertical, 6)
                             .padding(.horizontal, 10)
-                            .background(Color.white.opacity(0.14))
+                            .background(GlowPalette.creamyWhite.opacity(0.14))
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
                 } else {
                     Text(keyword)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .deepRoseText()
                         .padding(.vertical, 6)
                         .padding(.horizontal, 10)
-                        .background(Color.white.opacity(0.14))
+                        .background(GlowPalette.creamyWhite.opacity(0.14))
                         .clipShape(Capsule())
                 }
             }

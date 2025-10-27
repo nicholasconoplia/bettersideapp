@@ -36,12 +36,12 @@ struct RoadmapTaskRow: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(task.isCompleted ? accentColor.opacity(0.28) : Color.white.opacity(0.08))
+                        .fill(task.isCompleted ? accentColor.opacity(0.28) : GlowPalette.creamyWhite.opacity(0.08))
                         .frame(width: 36, height: 36)
                     if task.isCompleted {
                         Image(systemName: "checkmark")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundStyle(GlowPalette.deepRose)
                     }
                 }
             }
@@ -50,13 +50,13 @@ struct RoadmapTaskRow: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(task.title)
-                    .font(.headline)
-                    .foregroundStyle(.white.opacity(0.95))
+                    .font(.glowSubheading)
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.95))
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(task.body)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.75))
+                    .font(.glowBody)
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                     .lineLimit(maxBodyLines)
 
                 HStack(spacing: 10) {
@@ -65,23 +65,23 @@ struct RoadmapTaskRow: View {
                         .foregroundStyle(accentColor.opacity(0.85))
                     Divider()
                         .frame(height: 12)
-                        .background(Color.white.opacity(0.3))
+                        .background(GlowPalette.deepRose.opacity(0.3))
                     Text(task.timeframe)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.6))
+                        .font(GlowTypography.glowCaption)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
                 }
             }
             Spacer(minLength: 8)
             if onTap != nil {
                 Image(systemName: "chevron.right")
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.3))
                     .font(.system(size: 14, weight: .semibold))
             }
         }
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.white.opacity(task.isCompleted ? 0.06 : 0.1))
+                .fill(GlowPalette.creamyWhite.opacity(task.isCompleted ? 0.06 : 0.1))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)

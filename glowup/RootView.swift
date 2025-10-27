@@ -82,10 +82,10 @@ private struct SplashLoadingView: View {
             VStack(spacing: 20) {
                 Text("BetterSide")
                     .font(.largeTitle.bold())
-                    .foregroundStyle(.white)
+                    .deepRoseText()
                 ProgressView()
                     .progressViewStyle(.circular)
-                    .tint(.white)
+                    .tint(GlowPalette.roseGold)
             }
         }
         .ignoresSafeArea()

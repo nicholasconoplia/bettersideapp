@@ -51,7 +51,7 @@ struct StaticPhotoAnalysisView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 28)
-                                    .stroke(Color.white.opacity(0.2))
+                                    .stroke(GlowPalette.creamyWhite.opacity(0.2))
                             )
                             .shadow(color: .black.opacity(0.2), radius: 20, y: 12)
                     }
@@ -72,8 +72,8 @@ struct StaticPhotoAnalysisView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text("Analysis Result")
-                        .font(.headline)
-                        .foregroundStyle(.white)
+                        .font(.glowSubheading)
+                        .deepRoseText()
                 }
             }
         }
@@ -100,7 +100,7 @@ struct StaticPhotoAnalysisView: View {
         VStack(spacing: 20) {
             Text("Let's start your glow analysis.")
                 .font(.title3.bold())
-                .foregroundStyle(.white)
+                .deepRoseText()
                 .multilineTextAlignment(.center)
             Button {
                 Task { await analyzePhoto() }
@@ -109,8 +109,8 @@ struct StaticPhotoAnalysisView: View {
                     Image(systemName: "play.circle.fill")
                     Text("Start Analysis")
                 }
-                .font(.headline)
-                .foregroundColor(.white)
+                .font(.glowSubheading)
+                .deepRoseText()
                 .padding()
                 .frame(maxWidth: .infinity)
                 .background(
@@ -132,7 +132,7 @@ struct StaticPhotoAnalysisView: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.white.opacity(0.12))
+                .fill(GlowPalette.creamyWhite.opacity(0.12))
         )
     }
 
@@ -144,7 +144,7 @@ struct StaticPhotoAnalysisView: View {
                 HStack {
                     Text("Glow Score")
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                     Spacer()
                     Text("\(Int((session.confidenceScore ?? 0) * 100))%")
                         .font(.title2.bold())
@@ -155,10 +155,10 @@ struct StaticPhotoAnalysisView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Analysis")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
                     Text(session.aiSummary ?? "Your glow plan is ready.")
                         .font(.body.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.9))
                 }
                 
                 // Detailed Analysis Button
@@ -173,7 +173,7 @@ struct StaticPhotoAnalysisView: View {
                             Image(systemName: "chevron.right")
                         }
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.white)
+                        .deepRoseText()
                         .padding()
                         .background(
                             LinearGradient(
@@ -190,18 +190,18 @@ struct StaticPhotoAnalysisView: View {
                 } else {
                     Text("Detailed insights will appear once the analysis completes successfully.")
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                 }
             }
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color.white.opacity(0.12))
+                    .fill(GlowPalette.creamyWhite.opacity(0.12))
             )
         } else {
             Text("Tap Start Analysis to generate your personalized glow breakdown.")
                 .font(.footnote.weight(.medium))
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
         }
     }
 

@@ -34,7 +34,7 @@ struct InspirationInputView: View {
 			.toolbar {
 				ToolbarItem(placement: .cancellationAction) {
 					Button("Cancel") { dismiss() }
-						.tint(.white)
+						.tint(GlowPalette.roseGold)
 				}
 			}
 		}
@@ -66,11 +66,11 @@ struct InspirationInputView: View {
 
 			Text("Upload Inspiration")
 				.font(.title2.bold())
-				.foregroundStyle(.white)
+				.deepRoseText()
 
 			Text("Upload a photo of the look you want to try, and it will blend it with your image.")
 				.font(.subheadline)
-				.foregroundStyle(.white.opacity(0.75))
+				.foregroundStyle(GlowPalette.deepRose.opacity(0.75))
 				.multilineTextAlignment(.center)
 				.padding(.horizontal)
 		}
@@ -79,8 +79,8 @@ struct InspirationInputView: View {
 	private var categoryPicker: some View {
 		VStack(alignment: .leading, spacing: 12) {
 			Text("What kind of inspiration?")
-				.font(.headline)
-				.foregroundStyle(.white)
+				.font(.glowSubheading)
+				.deepRoseText()
 
 			LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
 				ForEach(InspirationCategory.allCases, id: \.self) { category in
@@ -89,7 +89,7 @@ struct InspirationInputView: View {
 					} label: {
 						HStack {
 							Image(systemName: category.systemImage)
-								.font(.title3)
+								.font(.glowHeading)
 							Text(category.rawValue)
 								.font(.subheadline.weight(.semibold))
 						}
@@ -97,11 +97,11 @@ struct InspirationInputView: View {
 						.padding()
 						.background(
 							RoundedRectangle(cornerRadius: 16, style: .continuous)
-								.fill(selectedCategory == category ? Color.white.opacity(0.25) : Color.white.opacity(0.08))
+								.fill(selectedCategory == category ? GlowPalette.blushOverlay(0.35) : GlowPalette.softOverlay(0.8))
 						)
 						.overlay(
 							RoundedRectangle(cornerRadius: 16, style: .continuous)
-								.stroke(selectedCategory == category ? Color.white.opacity(0.5) : Color.clear, lineWidth: 2)
+								.stroke(selectedCategory == category ? GlowPalette.roseStroke(0.6) : GlowPalette.roseStroke(0.25), lineWidth: 2)
 						)
 					}
 					.buttonStyle(.plain)
@@ -113,8 +113,8 @@ struct InspirationInputView: View {
 	private var imageSelector: some View {
 		VStack(alignment: .leading, spacing: 12) {
 			Text("Inspiration Photo")
-				.font(.headline)
-				.foregroundStyle(.white)
+				.font(.glowSubheading)
+				.deepRoseText()
 
 			if let image = selectedImage {
 				Image(uiImage: image)
@@ -124,24 +124,28 @@ struct InspirationInputView: View {
 					.clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 					.overlay(
 						RoundedRectangle(cornerRadius: 20, style: .continuous)
-							.stroke(Color.white.opacity(0.2), lineWidth: 1)
+							.stroke(GlowPalette.roseStroke(0.45), lineWidth: 1)
 					)
-					.shadow(color: .black.opacity(0.3), radius: 15, y: 10)
+					.shadow(color: GlowShadow.soft.color.opacity(0.7), radius: 15, y: 10)
 			} else {
-				RoundedRectangle(cornerRadius: 20, style: .continuous)
-					.fill(Color.white.opacity(0.08))
-					.frame(height: 200)
-					.overlay(
-						VStack(spacing: 12) {
-							Image(systemName: "photo.badge.plus")
-								.font(.system(size: 40))
-								.foregroundStyle(.white.opacity(0.6))
-							Text("No photo selected")
-								.font(.subheadline)
-								.foregroundStyle(.white.opacity(0.6))
-						}
-					)
-			}
+			RoundedRectangle(cornerRadius: 20, style: .continuous)
+				.fill(GlowPalette.softOverlay(0.65))
+				.frame(height: 200)
+				.overlay(
+					VStack(spacing: 12) {
+						Image(systemName: "photo.badge.plus")
+							.font(.system(size: 40))
+							.foregroundStyle(GlowPalette.deepRose.opacity(0.6))
+						Text("No photo selected")
+							.font(.subheadline)
+							.foregroundStyle(GlowPalette.deepRose.opacity(0.6))
+					}
+				)
+				.overlay(
+					RoundedRectangle(cornerRadius: 20, style: .continuous)
+						.stroke(GlowPalette.roseStroke(0.35), lineWidth: 1)
+				)
+		}
 
 			HStack(spacing: 12) {
 				PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
@@ -149,15 +153,15 @@ struct InspirationInputView: View {
 						.font(.subheadline.weight(.semibold))
 						.frame(maxWidth: .infinity)
 				}
-				.buttonStyle(.borderedProminent)
-				.tint(Color.white.opacity(0.18))
+				.buttonStyle(GlowFilledButtonStyle())
+				.tint(GlowPalette.roseStroke(0.3))
 
 				Button { showCameraPicker = true } label: {
 					Label("Take Photo", systemImage: "camera")
 						.font(.subheadline.weight(.semibold))
 						.frame(maxWidth: .infinity)
 				}
-				.buttonStyle(.borderedProminent)
+				.buttonStyle(GlowFilledButtonStyle())
 				.tint(Color(red: 0.94, green: 0.34, blue: 0.56).opacity(0.7))
 			}
 		}
@@ -166,19 +170,19 @@ struct InspirationInputView: View {
 	private var descriptionField: some View {
 		VStack(alignment: .leading, spacing: 12) {
 			Text("Additional Details (Optional)")
-				.font(.headline)
-				.foregroundStyle(.white)
+				.font(.glowSubheading)
+				.deepRoseText()
 
 			TextField("E.g., 'Make it more subtle' or 'Keep my natural color'", text: $description, axis: .vertical)
 				.textFieldStyle(.plain)
-				.foregroundStyle(.white)
+				.deepRoseText()
 				.padding()
 				.lineLimit(3...6)
-				.background(Color.white.opacity(0.08))
+				.background(GlowPalette.softOverlay(0.8))
 				.clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 				.overlay(
 					RoundedRectangle(cornerRadius: 16, style: .continuous)
-						.stroke(Color.white.opacity(0.1), lineWidth: 1)
+						.stroke(GlowPalette.roseStroke(0.3), lineWidth: 1)
 				)
 		}
 	}
@@ -199,7 +203,7 @@ struct InspirationInputView: View {
 				if viewModel.isProcessing {
 					ProgressView()
 						.progressViewStyle(.circular)
-						.tint(.white)
+						.tint(GlowPalette.roseGold)
 				} else {
 					Image(systemName: "wand.and.stars")
 						.font(.headline.weight(.semibold))
@@ -207,14 +211,14 @@ struct InspirationInputView: View {
 						.font(.headline.weight(.semibold))
 				}
 			}
-			.foregroundStyle(.white)
+			.deepRoseText()
 			.frame(maxWidth: .infinity)
 			.padding()
 			.background(
 				RoundedRectangle(cornerRadius: 20, style: .continuous)
 					.fill(
 						selectedImage == nil || viewModel.isProcessing
-						? Color.white.opacity(0.2)
+						? GlowPalette.roseStroke(0.45)
 						: Color(red: 0.94, green: 0.34, blue: 0.56)
 					)
 			)
@@ -266,5 +270,4 @@ private struct CameraPickerView: UIViewControllerRepresentable {
 		func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { parent.dismiss() }
 	}
 }
-
 

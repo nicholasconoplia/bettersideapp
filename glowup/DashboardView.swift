@@ -36,6 +36,9 @@ struct DashboardView: View {
         return formatter
     }()
 
+    @State private var isPresentingNameEditor = false
+    @State private var nameEditorInitialValue: String = ""
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -65,6 +68,14 @@ struct DashboardView: View {
             .navigationTitle("")
             .toolbar(.hidden, for: .navigationBar)
         }
+        .sheet(isPresented: $isPresentingNameEditor) {
+            NameEditorSheet(
+                originalName: nameEditorInitialValue,
+                onSave: { newValue in
+                    appModel.updateUserName(newValue)
+                }
+            )
+        }
     }
 
     private var header: some View {
@@ -91,9 +102,26 @@ struct DashboardView: View {
                 )
 
             VStack(spacing: 6) {
-                Text(displayName)
-                    .font(GlowTypography.heading(24, weight: .semibold))
-                    .foregroundStyle(GlowPalette.deepRose)
+                Button {
+                    nameEditorInitialValue = appModel.latestQuiz?.userName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    isPresentingNameEditor = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(displayName)
+                            .font(GlowTypography.heading(24, weight: .semibold))
+                            .foregroundStyle(GlowPalette.deepRose)
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(GlowPalette.roseGold.opacity(0.8))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(GlowPalette.creamyWhite.opacity(0.35))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Edit name")
+
                 Text("Level \(levelInfo.level)")
                     .font(GlowTypography.body(15, weight: .medium))
                     .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
@@ -240,7 +268,7 @@ struct DashboardView: View {
                 .frame(width: 52, height: 52)
                 .overlay {
                     Image(systemName: "camera.aperture")
-                        .font(.title3)
+                        .font(.glowHeading)
                         .foregroundStyle(GlowPalette.deepRose)
                 }
 
@@ -357,5 +385,84 @@ struct DashboardView: View {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         return formatter.string(from: session.startTime ?? Date())
+    }
+
+    private struct NameEditorSheet: View {
+        let originalName: String
+        let onSave: (String) -> Void
+
+        @State private var name: String
+        @Environment(\.dismiss) private var dismiss
+        @FocusState private var isNameFieldFocused: Bool
+
+        init(originalName: String, onSave: @escaping (String) -> Void) {
+            self.originalName = originalName
+            self.onSave = onSave
+            _name = State(initialValue: originalName)
+        }
+
+        var body: some View {
+            NavigationStack {
+                VStack(spacing: 24) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Update your name")
+                            .font(GlowTypography.heading(24, weight: .bold))
+                            .foregroundStyle(GlowPalette.deepRose)
+
+                        TextField("Your name", text: $name)
+                            .textInputAutocapitalization(.words)
+                            .disableAutocorrection(true)
+                            .focused($isNameFieldFocused)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(GlowPalette.softBeige)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(GlowPalette.roseGold.opacity(0.3), lineWidth: 1)
+                            )
+
+                        Text("Leave blank to use the default greeting.")
+                            .font(GlowTypography.caption)
+                            .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Button {
+                        onSave(name)
+                        dismiss()
+                    } label: {
+                        Text("Save")
+                            .font(GlowTypography.button)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .glowRoundedButtonBackground(isEnabled: canSave)
+                    .disabled(!canSave)
+                }
+                .padding(24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .background(GlowGradient.canvas.ignoresSafeArea())
+                .navigationTitle("Edit Name")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                    }
+                }
+            }
+            .presentationDetents([.fraction(0.35), .large])
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    isNameFieldFocused = true
+                }
+            }
+        }
+
+        private var canSave: Bool {
+            name.trimmingCharacters(in: .whitespacesAndNewlines)
+                != originalName.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
     }
 }

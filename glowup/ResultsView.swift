@@ -93,7 +93,7 @@ struct ResultsSheetView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                .stroke(GlowPalette.roseGold.opacity(0.25), lineWidth: 1)
                         )
                         .shadow(color: .black.opacity(0.18), radius: 14, y: 10)
                 }
@@ -108,7 +108,7 @@ struct ResultsSheetView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 26, style: .continuous)
-                            .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                            .stroke(GlowPalette.roseGold.opacity(0.25), lineWidth: 1)
                     )
                     if subscriptionManager.isSubscribed {
                         visualizeButton(for: session)
@@ -140,31 +140,31 @@ struct ResultsSheetView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.white.opacity(0.2))
+                            .stroke(GlowPalette.roseGold.opacity(0.3))
                     )
             } else {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.white.opacity(0.15))
+                    .fill(GlowPalette.roseGold.opacity(0.2))
                     .frame(width: 64, height: 64)
                     .overlay(
                         Image(systemName: "photo")
-                            .font(.title2)
-                            .foregroundColor(.white.opacity(0.6))
+                            .font(.glowHeading)
+                            .foregroundColor(GlowPalette.deepRose.opacity(0.6))
                     )
             }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(dateLabel(for: session))
-                    .font(.subheadline.weight(.semibold))
+                    .font(GlowTypography.glowCaption)
                     .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
 
                 Text(session.sessionType ?? "Static Photo")
-                    .font(.headline)
+                    .font(GlowTypography.glowSubheading)
                     .foregroundStyle(GlowPalette.deepRose)
 
                 if let summary = session.aiSummary {
                     Text(summary)
-                        .font(.footnote)
+                        .font(GlowTypography.glowCaption)
                         .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                         .lineLimit(3)
                 }
@@ -176,10 +176,10 @@ struct ResultsSheetView: View {
             if confidence > 0 {
                 VStack(spacing: 4) {
                     Text("\(Int(confidence * 100))")
-                        .font(.title3.weight(.bold))
+                        .font(GlowTypography.glowSubheading)
                         .foregroundStyle(GlowPalette.deepRose)
                     Text("Glow")
-                        .font(.caption2.weight(.semibold))
+                        .font(GlowTypography.glowCaption)
                         .foregroundStyle(GlowPalette.deepRose.opacity(0.65))
                 }
                 .padding(.horizontal, 14)
@@ -198,7 +198,7 @@ struct ResultsSheetView: View {
         } label: {
             Image(systemName: "trash")
                 .font(.body.weight(.medium))
-                .foregroundStyle(.white)
+                .deepRoseText()
         }
         .disabled(sessions.isEmpty)
     }
@@ -214,16 +214,16 @@ struct ResultsSheetView: View {
         VStack(spacing: 16) {
             Image(systemName: "text.magnifyingglass")
                 .font(.system(size: 48))
-                .foregroundColor(.white.opacity(0.75))
+                .foregroundColor(GlowPalette.deepRose.opacity(0.75))
 
             Text("No analyses yet")
                 .font(.title2.bold())
-                .foregroundStyle(.white)
+                .deepRoseText()
 
             Text("Upload a photo and tap Start Analysis to unlock your glow insights. Every successful session will be saved here automatically.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
                 .padding(.horizontal, 40)
         }
     }
@@ -235,14 +235,14 @@ struct ResultsSheetView: View {
                 .foregroundColor(.yellow)
             Text("Analysis unavailable for this session.")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
+                .deepRoseText()
             Text("Run a fresh photo analysis to capture a complete result.")
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
         }
         .padding()
         .frame(maxWidth: .infinity)
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.creamyWhite.opacity(0.08))
         .cornerRadius(18)
     }
 
@@ -269,10 +269,10 @@ struct ResultsSheetView: View {
                 Text("Visualize This Look")
                     .font(.headline.weight(.semibold))
             }
-            .foregroundStyle(.white)
+            .deepRoseText()
             .padding()
             .frame(maxWidth: .infinity)
-            .background(Color.white.opacity(0.14))
+            .background(GlowPalette.creamyWhite.opacity(0.14))
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
         .buttonStyle(.plain)

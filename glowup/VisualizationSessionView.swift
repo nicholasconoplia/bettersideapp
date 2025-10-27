@@ -76,7 +76,7 @@ struct VisualizationSessionView: View {
         .sheet(isPresented: $showLikeSheet) {
             VStack(spacing: 20) {
                 Text("Who is this look for?")
-                    .font(.headline)
+                    .font(.glowSubheading)
                 ForEach(VisualizationLookCategory.allCases, id: \.self) { category in
                     Button(category.displayName) {
                         Task {
@@ -118,9 +118,9 @@ struct VisualizationSessionView: View {
                     showInspirationInput = true
                 } label: {
                     Label("Add Inspiration", systemImage: "photo.badge.plus")
-                        .font(.headline)
+                        .font(.glowSubheading)
                 }
-                .tint(.white)
+                .tint(GlowPalette.roseGold)
             }
         }
         .sheet(isPresented: $showInspirationInput) {
@@ -187,11 +187,12 @@ struct VisualizationSessionView: View {
                 Image(systemName: "arrow.up.right")
                     .font(.subheadline.weight(.bold))
             }
-            .foregroundStyle(.white)
+            .deepRoseText()
+            .frame(maxWidth: .infinity)
             .padding()
-            .background(Color(red: 0.94, green: 0.34, blue: 0.56))
+            .background(GlowGradient.blushAccent)
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .shadow(color: .black.opacity(0.25), radius: 12, y: 8)
+            .shadow(color: GlowShadow.soft.color.opacity(0.8), radius: 10, y: 6)
         }
         .buttonStyle(.plain)
         .disabled(!canSave || viewModel.isProcessing)
@@ -203,19 +204,19 @@ struct VisualizationSessionView: View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Visualization Session")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
 
                 if let createdAt = session.createdAt {
                     Text(createdAt, style: .date)
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                 }
 
                 if let reference = session.analysisReference {
                     Text("Linked to analysis #\(reference.uuidString.prefix(6))")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.55))
+                        .font(.glowBody)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.55))
                 }
             }
 
@@ -244,7 +245,7 @@ struct VisualizationSessionView: View {
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
                     .padding(6)
             }
         }
@@ -258,7 +259,7 @@ struct VisualizationSessionView: View {
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    .stroke(GlowPalette.creamyWhite.opacity(0.12), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.35), radius: 24, y: 16)
             .contextMenu {
@@ -274,8 +275,8 @@ struct VisualizationSessionView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Edit History")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
                 Spacer()
                 Button {
                     viewModel.isPresentingImagePicker = true
@@ -283,7 +284,7 @@ struct VisualizationSessionView: View {
                     Label("Change Image", systemImage: "camera.rotate")
                         .font(.footnote.weight(.semibold))
                         .padding(8)
-                        .background(Color.white.opacity(0.08))
+                        .background(GlowPalette.creamyWhite.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -335,7 +336,7 @@ struct VisualizationSessionView: View {
             HStack {
                 Text("AI Presets")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .deepRoseText()
                 Spacer()
             }
 
@@ -346,53 +347,34 @@ struct VisualizationSessionView: View {
                 HStack(spacing: 16) {
                     Image(systemName: "photo.stack.fill")
                         .font(.title2.weight(.semibold))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.94, green: 0.34, blue: 0.56),
-                                    Color(red: 1.0, green: 0.6, blue: 0.78)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .foregroundStyle(GlowPalette.deepRose)
                         .frame(width: 48, height: 48)
-                        .background(Color.white.opacity(0.12))
+                        .background(GlowPalette.blushOverlay(0.35))
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Upload Inspiration Photo")
-                            .font(.headline)
-                            .foregroundStyle(.white)
+                            .font(.glowSubheading)
+                            .deepRoseText()
                         Text("Upload an inspiration photo of the look you want to try")
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                     }
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(GlowPalette.roseGold.opacity(0.6))
                         .font(.body.weight(.semibold))
                 }
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(Color.white.opacity(0.08))
+                        .fill(GlowPalette.softOverlay(0.85))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.94, green: 0.34, blue: 0.56).opacity(0.5),
-                                    Color(red: 1.0, green: 0.6, blue: 0.78).opacity(0.3)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
+                        .stroke(GlowPalette.roseStroke(), lineWidth: 1)
                 )
             }
             .buttonStyle(.plain)
@@ -401,10 +383,10 @@ struct VisualizationSessionView: View {
             if activePresets.isEmpty {
                 Text("Once you have an analysis linked, smart presets will appear here.")
                     .font(.callout)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.white.opacity(0.05))
+                    .background(GlowPalette.creamyWhite.opacity(0.05))
                     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -420,8 +402,13 @@ struct VisualizationSessionView: View {
                                     .padding(.vertical, 10)
                                     .background(
                                         Capsule()
-                                            .fill(isSelected ? Color.white.opacity(0.25) : Color.white.opacity(0.08))
+                                            .fill(isSelected ? GlowPalette.blushOverlay(0.35) : GlowPalette.softOverlay(0.8))
                                     )
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(isSelected ? GlowPalette.roseStroke(0.6) : GlowPalette.roseStroke(0.25), lineWidth: 1.2)
+                                    )
+                                    .foregroundStyle(GlowPalette.deepRose)
                             }
                             .buttonStyle(.plain)
                         }
@@ -433,15 +420,15 @@ struct VisualizationSessionView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text(preset.description)
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
 
                         let recommended = preset.options.filter { $0.isRecommended }
                         let others = preset.options.filter { !$0.isRecommended }
 
                         if !recommended.isEmpty {
                             Text("Recommended")
-                                .font(.headline)
-                                .foregroundStyle(.white.opacity(0.85))
+                                .font(.glowSubheading)
+                                .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
 
                             LazyVStack(spacing: 12) {
                                 ForEach(recommended, id: \.id) { option in
@@ -456,8 +443,8 @@ struct VisualizationSessionView: View {
 
                         if !others.isEmpty {
                             Text(recommended.isEmpty ? "Options" : "More Options")
-                                .font(.headline)
-                                .foregroundStyle(.white.opacity(0.85))
+                                .font(.glowSubheading)
+                                .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                                 .padding(.top, recommended.isEmpty ? 0 : 8)
 
                             LazyVStack(spacing: 12) {
@@ -480,8 +467,8 @@ struct VisualizationSessionView: View {
     private func analysisInsights(_ session: VisualizationSession) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Guidance Notes")
-                .font(.headline)
-                .foregroundStyle(.white)
+                .font(.glowSubheading)
+                .deepRoseText()
 
             if let analysis = viewModel.analysisForActiveSession() {
                 VStack(alignment: .leading, spacing: 10) {
@@ -508,15 +495,23 @@ struct VisualizationSessionView: View {
                     }
                 }
                 .padding()
-                .background(Color.white.opacity(0.06))
+                .background(GlowPalette.softOverlay(0.85))
                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(GlowPalette.roseStroke(0.35), lineWidth: 1)
+                )
             } else {
                 Text("Run a fresh analysis to unlock tailored presets and insights.")
                     .font(.callout)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
                     .padding()
-                    .background(Color.white.opacity(0.05))
+                    .background(GlowPalette.softOverlay(0.8))
                     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(GlowPalette.roseStroke(0.25), lineWidth: 1)
+                    )
             }
         }
     }
@@ -524,17 +519,17 @@ struct VisualizationSessionView: View {
     private func insightRow(title: String, value: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Circle()
-                .fill(Color.white.opacity(0.15))
+                .fill(GlowPalette.creamyWhite.opacity(0.15))
                 .frame(width: 8, height: 8)
                 .padding(.top, 6)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                 Text(value)
-                    .font(.body)
-                    .foregroundStyle(.white)
+                    .font(.glowBody)
+                    .deepRoseText()
             }
         }
     }
@@ -543,30 +538,30 @@ struct VisualizationSessionView: View {
         VStack(spacing: 20) {
             Image(systemName: "wand.and.stars")
                 .font(.system(size: 56))
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.65))
 
             Text("Visualize Your Next Look")
                 .font(.title2.weight(.bold))
-                .foregroundStyle(.white)
+                .deepRoseText()
 
             Text("Send a look from your analysis or upload a fresh photo to start transforming your glow story.")
-                .font(.body)
+                .font(.glowBody)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                 .padding(.horizontal, 28)
 
             Button {
                 viewModel.isPresentingImagePicker = true
             } label: {
                 Label("Start Visualization", systemImage: "sparkles")
-                    .font(.headline)
+                    .font(.glowSubheading)
                     .padding(.horizontal, 28)
                     .padding(.vertical, 14)
                     .background(
                         Capsule()
                             .fill(Color(red: 0.94, green: 0.34, blue: 0.56))
                     )
-                    .foregroundStyle(.white)
+                    .deepRoseText()
             }
             .buttonStyle(.plain)
         }

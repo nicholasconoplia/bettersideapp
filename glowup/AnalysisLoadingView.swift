@@ -30,7 +30,7 @@ struct AnalysisLoadingView: View {
             // Infinite rotating gradient animation
             ZStack {
                 Circle()
-                    .stroke(Color.white.opacity(0.1), lineWidth: 8)
+                    .stroke(GlowPalette.creamyWhite.opacity(0.1), lineWidth: 8)
                     .frame(width: 100, height: 100)
                 
                 Circle()
@@ -55,21 +55,21 @@ struct AnalysisLoadingView: View {
                     }
                 
                 Image(systemName: "sparkles")
-                    .font(.title2)
+                    .font(.glowHeading)
                     .foregroundStyle(Color(red: 0.94, green: 0.34, blue: 0.56))
             }
             
             // Stage indicator
             VStack(spacing: 12) {
                 Text(currentStage)
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
                     .multilineTextAlignment(.center)
                 
                 // Rotating tips
                 Text(loadingTips[currentTipIndex])
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))

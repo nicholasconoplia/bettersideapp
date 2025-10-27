@@ -14,6 +14,8 @@ struct RoadmapView: View {
     @StateObject private var viewModel = RoadmapViewModel()
     @State private var isRequestingGeneration = false
     @AppStorage("hasUsedFreeScan") private var hasUsedFreeScan = false
+    @State private var showFutureWeekAlert = false
+    @State private var futureWeekMessage: String?
 
     private let accentGradient = LinearGradient(
         colors: [
@@ -36,7 +38,7 @@ struct RoadmapView: View {
                             .tint(GlowPalette.blushPink)
                             .scaleEffect(1.5)
                         Text("Analyzing your scan and building your Glow Plan ✨")
-                            .font(.headline)
+                            .font(.glowSubheading)
                             .multilineTextAlignment(.center)
                             .foregroundStyle(GlowPalette.deepRose)
                             .padding(.horizontal)
@@ -97,27 +99,46 @@ struct RoadmapView: View {
                 dismissButton: .default(Text("Got it"))
             )
         }
+        .alert("Keep progressing", isPresented: $showFutureWeekAlert, actions: {
+            Button("Got it", role: .cancel) { futureWeekMessage = nil }
+        }, message: {
+            Text(futureWeekMessage ?? "Once this week is done and you log a new scan, the next week will unlock for you.")
+        })
+        .sheet(isPresented: Binding(
+            get: { viewModel.showCompletionModal },
+            set: { value in viewModel.showCompletionModal = value }
+        )) {
+            completionCelebrationView
+                .presentationDetents([.medium])
+        }
+        .sheet(isPresented: Binding(
+            get: { viewModel.milestoneMessage != nil },
+            set: { value in if !value { viewModel.milestoneMessage = nil } }
+        )) {
+            milestoneCelebrationView
+                .presentationDetents([.fraction(0.35)])
+        }
     }
 
     private var lockedOverlay: some View {
         ScrollView {
             VStack(spacing: 20) {
                 Text("Glow Plan (Locked)")
-                    .font(.title2.bold())
+                    .font(GlowTypography.glowHeading)
                     .foregroundStyle(GlowPalette.deepRose)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("What this tab gives you")
-                        .font(.headline)
-                        .foregroundStyle(.white)
+                        .font(GlowTypography.glowSubheading)
+                        .foregroundStyle(GlowPalette.deepRose)
                     Text("A week-by-week, auto-prioritized plan built from your analysis. It includes instant fixes, long-term upgrades, reminders, and personalized tips.")
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .font(GlowTypography.glowBody)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding()
-                .background(Color.white.opacity(0.08))
+                .background(GlowPalette.softBeige)
                 .cornerRadius(18)
 
                 ZStack {
@@ -127,7 +148,7 @@ struct RoadmapView: View {
                         Image(systemName: "lock.fill")
                             .foregroundStyle(GlowPalette.deepRose)
                         Text("Your personalized Glow Plan is part of Full Analysis")
-                            .font(.subheadline.weight(.semibold))
+                            .font(GlowTypography.glowBody)
                             .foregroundStyle(GlowPalette.deepRose)
                             .multilineTextAlignment(.center)
                         Button {
@@ -158,8 +179,8 @@ struct RoadmapView: View {
         case .loading:
             VStack(spacing: 16) {
                 ProgressView("Loading your roadmap…")
-                    .tint(.white)
-                    .foregroundStyle(.white)
+                    .tint(GlowPalette.roseGold)
+                    .deepRoseText()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .empty:
@@ -174,15 +195,15 @@ struct RoadmapView: View {
             Spacer()
             Image(systemName: "calendar.badge.plus")
                 .font(.system(size: 56))
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.65))
             Text("Weekly Glow Roadmap")
                 .font(.title.bold())
-                .foregroundStyle(.white)
+                .deepRoseText()
             let canGenerate = appModel.latestAnalysis != nil
             Text(canGenerate ? viewModel.emptyStateMessage : "Run a fresh photo analysis to unlock your personalized plan.")
-                .font(.body)
+                .font(.glowBody)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                 .frame(maxWidth: 320)
 
             Button {
@@ -197,8 +218,8 @@ struct RoadmapView: View {
                     Image(systemName: "sparkles")
                     Text("Generate from Latest Analysis")
                 }
-                .font(.headline)
-                .foregroundStyle(.white)
+                .font(.glowSubheading)
+                .deepRoseText()
                 .padding()
                 .frame(maxWidth: 320)
                 .background(accentGradient)
@@ -221,19 +242,22 @@ struct RoadmapView: View {
             VStack(alignment: .leading, spacing: 24) {
                 header
 
-                LazyVStack(spacing: 20, pinnedViews: []) {
-                    ForEach(viewModel.weeks) { week in
-                        RoadmapWeekCard(
-                            week: week,
-                            onOpenDetail: {
-                                viewModel.presentWeekDetail(week)
-                            },
-                            onLockedTap: {
-                                viewModel.requestSubscriptionUpsell(source: "week_card_\(week.number)")
-                            }
+                if let activeWeek = viewModel.currentWeek {
+                    dailyChecklist(for: activeWeek)
+                } else {
+                    Text("Run a fresh scan to build today’s personalized checklist.")
+                        .font(.callout)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
+                        .padding()
+                        .background(GlowPalette.softOverlay(0.85))
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .stroke(GlowPalette.roseStroke(0.25), lineWidth: 1)
                         )
-                    }
                 }
+
+                weeklyProgressSection
             }
             .padding(.bottom, 48)
         }
@@ -252,11 +276,15 @@ struct RoadmapView: View {
                         Text("Rescan for Week \(currentWeekNumber + 1)")
                     }
                     .font(.subheadline.bold())
-                    .foregroundStyle(.white)
+                    .deepRoseText()
                     .padding(.vertical, 12)
                     .frame(maxWidth: .infinity)
-                    .background(Color.white.opacity(0.14))
+                    .background(GlowPalette.softOverlay(0.9))
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(GlowPalette.roseStroke(0.3), lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
                 .disabled(!canRescan)
@@ -265,12 +293,12 @@ struct RoadmapView: View {
                 if !canRescan {
                     Text("Complete every task to unlock Week \(currentWeekNumber + 1).")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                 }
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
-            .background(.ultraThinMaterial.opacity(0.08))
+            .background(GlowPalette.creamyWhite.opacity(0.92))
         }
     }
 
@@ -285,14 +313,6 @@ struct RoadmapView: View {
             Text("Your daily checklist")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
-
-            Text("Tap any card to open the full weekly action plan with step-by-step coaching.")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.65))
-
-            Text("Finish everything on this list, then rescan to unlock Week \(currentWeekNumber + 1).")
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(.white.opacity(0.6))
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
@@ -309,8 +329,160 @@ struct RoadmapView: View {
             .padding(18)
             .background(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(GlowPalette.softBeige)
+                    .fill(GlowPalette.softOverlay(0.85))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(GlowPalette.roseStroke(0.35), lineWidth: 1)
             )
         }
+    }
+
+    private func dailyChecklist(for week: RoadmapViewModel.Week) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ForEach(week.tasks) { task in
+                Button {
+                    withAnimation(.easeInOut) {
+                        viewModel.toggleTaskCompletion(task)
+                    }
+                } label: {
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(task.isCompleted ? GlowPalette.roseGold : GlowPalette.roseStroke(0.4))
+                            .padding(.top, 4)
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(task.title)
+                                .font(.glowSubheading)
+                                .foregroundStyle(GlowPalette.deepRose)
+                            if !task.body.isEmpty {
+                                Text(task.body)
+                                    .font(.glowBody)
+                                    .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
+                            }
+                            if !task.timeframe.isEmpty {
+                                Text(task.timeframe)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(GlowPalette.roseGold.opacity(0.8))
+                            }
+                        }
+
+                        Spacer()
+                    }
+                    .padding(16)
+                    .background(GlowPalette.softOverlay(task.isCompleted ? 0.7 : 0.9))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(GlowPalette.roseStroke(task.isCompleted ? 0.45 : 0.3), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(18)
+        .background(GlowPalette.softOverlay(0.92))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(GlowPalette.roseStroke(0.3), lineWidth: 1)
+        )
+    }
+
+    private var weeklyProgressSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Weekly Progress")
+                .font(.glowSubheading)
+                .deepRoseText()
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(viewModel.weeks) { week in
+                        RoadmapWeekCard(
+                            week: week,
+                            onOpenDetail: {
+                                viewModel.presentWeekDetail(week)
+                            },
+                            onLockedTap: { reason in
+                                switch reason {
+                                case .subscription:
+                                    viewModel.requestSubscriptionUpsell(source: "week_card_\(week.number)")
+                                case .future:
+                                    futureWeekMessage = "I know some people like to rush ahead to see all of the week’s tasks, but progress takes time. Once you finish this week and run a new scan, the next week will unlock for you."
+                                    showFutureWeekAlert = true
+                                }
+                            }
+                        )
+                        .frame(width: 280)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    private var completionCelebrationView: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 48, weight: .bold))
+                .foregroundStyle(GlowPalette.roseGold)
+
+            Text("Plan complete")
+                .font(.title2.bold())
+                .foregroundStyle(GlowPalette.deepRose)
+
+            Text("Your consistency drives visible improvement.")
+                .font(.glowBody)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
+                .padding(.horizontal, 24)
+
+            VStack(spacing: 12) {
+                Button {
+                    appModel.navigateToAnalyzeRequested = true
+                    viewModel.showCompletionModal = false
+                } label: {
+                    Text("View Insights")
+                        .font(.glowButton)
+                        .frame(maxWidth: .infinity)
+                }
+                .glowRoundedButtonBackground(isEnabled: true)
+
+                Button("Maybe later") {
+                    viewModel.showCompletionModal = false
+                }
+                .font(.glowBody.weight(.semibold))
+                .foregroundStyle(GlowPalette.roseGold)
+            }
+        }
+        .padding(28)
+        .presentationDragIndicator(.visible)
+    }
+
+    private var milestoneCelebrationView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "seal.fill")
+                .font(.system(size: 46))
+                .foregroundStyle(GlowPalette.roseGold)
+
+            Text("Glow Milestone")
+                .font(.title3.bold())
+                .foregroundStyle(GlowPalette.deepRose)
+
+            Text(viewModel.milestoneMessage ?? "Seven days of dedication! Keep your streak alive.")
+                .font(.glowBody)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
+                .padding(.horizontal, 24)
+
+            Button("Celebrate") {
+                viewModel.milestoneMessage = nil
+            }
+            .font(.glowButton)
+            .glowRoundedButtonBackground(isEnabled: true)
+        }
+        .padding(28)
+        .presentationDragIndicator(.visible)
     }
 }

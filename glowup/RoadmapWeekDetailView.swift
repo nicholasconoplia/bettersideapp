@@ -30,7 +30,7 @@ struct RoadmapWeekDetailView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundStyle(.white)
+                    .deepRoseText()
                 }
             }
         }
@@ -41,10 +41,10 @@ struct RoadmapWeekDetailView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(week.title)
                     .font(.title2.bold())
-                    .foregroundStyle(.white)
+                    .deepRoseText()
                 Text(week.summary)
-                    .font(.body)
-                    .foregroundStyle(.white.opacity(0.78))
+                    .font(.glowBody)
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.78))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -52,28 +52,28 @@ struct RoadmapWeekDetailView: View {
                 HStack {
                     Text("Plan progress")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                     Spacer()
                     Text("\(Int(round(week.progress * 100)))%")
                         .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                 }
                 ProgressView(value: week.progress)
-                    .tint(.white)
-                    .accentColor(.white)
+                    .tint(GlowPalette.roseGold)
+                    .tint(GlowPalette.roseGold)
             }
 
             if let lockMessage = week.lockMessage {
                 HStack(spacing: 8) {
                     Image(systemName: week.subscriptionLocked ? "crown.fill" : "lock.fill")
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                     Text(lockMessage)
                         .font(.footnote.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                 }
                 .padding(.vertical, 10)
                 .padding(.horizontal, 14)
-                .background(Color.white.opacity(0.12))
+                .background(GlowPalette.creamyWhite.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
         }
@@ -81,7 +81,7 @@ struct RoadmapWeekDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(0.12))
+                .fill(GlowPalette.creamyWhite.opacity(0.12))
         )
     }
 
@@ -90,23 +90,23 @@ struct RoadmapWeekDetailView: View {
         if week.tasks.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 Text("No actions yet")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
                 Text("Generate a fresh photo analysis to unlock a personalized plan for this focus.")
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color.white.opacity(0.08))
+                    .fill(GlowPalette.creamyWhite.opacity(0.08))
             )
         } else {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Action plan")
-                    .font(.headline)
-                    .foregroundStyle(.white.opacity(0.85))
+                    .font(.glowSubheading)
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
 
                 ForEach(week.tasks) { task in
                     VStack(alignment: .leading, spacing: 10) {
@@ -125,7 +125,7 @@ struct RoadmapWeekDetailView: View {
 
                 Text("Check off each action, then rescan to unlock Week \(week.number + 1).")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.65))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.65))
                     .padding(.top, 4)
             }
         }
@@ -135,15 +135,15 @@ struct RoadmapWeekDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Try searching:")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.65))
             ForEach(task.productSuggestions, id: \.self) { suggestion in
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "sparkle")
-                        .font(.caption)
+                        .font(.glowBody)
                         .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.88))
                     Text(suggestion)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.7))
+                        .font(.glowBody)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -152,7 +152,7 @@ struct RoadmapWeekDetailView: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
+                .strokeBorder(GlowPalette.creamyWhite.opacity(0.18), lineWidth: 1)
         )
     }
 }

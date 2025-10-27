@@ -55,12 +55,17 @@ final class RoadmapViewModel: ObservableObject {
     @Published var selectedWeek: Week?
     @Published var showingSubscriptionPaywall = false
     @Published private(set) var emptyStateMessage: String = "Complete your first photo analysis to generate your roadmap."
+    @Published var showCompletionModal = false
+    @Published var completedWeekTitle: String?
+    @Published var milestoneMessage: String?
+    @Published private(set) var currentWeek: Week?
 
     private weak var appModel: AppModel?
     private weak var subscriptionManager: SubscriptionManager?
     private var context: NSManagedObjectContext?
     private var cancellables = Set<AnyCancellable>()
     private var isConfigured = false
+    private let milestoneDefaultsKey = "glowup.lastGlowMilestoneDate"
 
     func configure(
         appModel: AppModel,
@@ -166,9 +171,17 @@ final class RoadmapViewModel: ObservableObject {
         if allCompleted, !weekWasCompleted {
             appModel?.trackWeekCompleted(weekNumber: Int(roadmapWeek.weekNumber))
             scheduleNextNotification(afterCompleting: roadmapWeek)
+            completedWeekTitle = week.title
+            showCompletionModal = true
+            maybeTriggerMilestone()
         }
 
         Task { await reload() }
+    }
+
+    func toggleTaskCompletion(_ task: Week.Task) {
+        guard let week = weeks.first(where: { $0.id == task.weekID }) else { return }
+        toggleTaskCompletion(task, in: week)
     }
 
     func requestSubscriptionUpsell(source: String) {
@@ -192,6 +205,7 @@ final class RoadmapViewModel: ObservableObject {
 
         for index in sortedWeeks.indices where index > 0 {
             let current = sortedWeeks[index]
+            let wasLocked = !current.isUnlocked
             if current.isUnlocked { continue }
 
             let previous = sortedWeeks[index - 1]
@@ -208,6 +222,10 @@ final class RoadmapViewModel: ObservableObject {
             if shouldUnlock {
                 current.isUnlocked = true
                 current.unlockedAt = current.unlockedAt ?? Date()
+                if wasLocked && !previousComplete {
+                    milestoneMessage = "Glow Milestone unlocked! Week \(current.weekNumber) is now ready after staying consistent for a full week."
+                    UserDefaults.standard.set(Date(), forKey: milestoneDefaultsKey)
+                }
             }
         }
     }
@@ -235,10 +253,9 @@ final class RoadmapViewModel: ObservableObject {
 
         if let activeWeek = selectedWeek {
             selectedWeek = weeks.first(where: { $0.id == activeWeek.id })
-        } else if let current = weeks.first(where: { $0.isCurrent }) {
-            selectedWeek = current
         }
 
+        currentWeek = weeks.first(where: { $0.isCurrent })
         self.weeks = weeks
         state = weeks.isEmpty ? .empty : .ready
     }
@@ -335,5 +352,15 @@ final class RoadmapViewModel: ObservableObject {
     private func scheduleNextNotification(afterCompleting week: RoadmapWeek) {
         let nextWeekNumber = Int(week.weekNumber) + 1
         RoadmapNotificationManager.shared.scheduleWeeklyCheckIn(forWeek: nextWeekNumber)
+    }
+
+    private func maybeTriggerMilestone() {
+        let now = Date()
+        let last = UserDefaults.standard.object(forKey: milestoneDefaultsKey) as? Date
+        let sevenDays: TimeInterval = 7 * 24 * 60 * 60
+        if last == nil || now.timeIntervalSince(last!) >= sevenDays {
+            milestoneMessage = "Seven days of consistency! Keep your streak alive and celebrate your glow progress."
+            UserDefaults.standard.set(now, forKey: milestoneDefaultsKey)
+        }
     }
 }

@@ -67,22 +67,18 @@ struct DetailedFeedbackView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // Annotated Image with Face Overlay
+                // Original photo (overlay removed per user feedback)
                 if showAnnotatedImage, let image = annotatedImage {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Your Photo Analysis")
-                            .font(.headline)
-                            .foregroundColor(.white)
+                        Text("Your Photo")
+                            .font(.glowSubheading)
+                            .deepRoseText()
                         
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFit()
                             .cornerRadius(20)
                             .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
-                        
-                        Text("Glowing overlay traces your detected face shape and key landmarks.")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
                     }
                 }
                 
@@ -101,10 +97,9 @@ struct DetailedFeedbackView: View {
                         lockedSection(title: "Brows & Framing")
                         lockedSection(title: "Trait Breakdown")
                         lockedSection(title: "Soft-Max Roadmap")
-                        lockedSection(title: "Lighting")
-                        lockedSection(title: "Eye Color & Color Palette")
-                        lockedSection(title: "Pose & Angle")
-                        lockedSection(title: "Makeup & Style")
+                        lockedSection(title: "Seasonal Color Palette")
+                        lockedSection(title: "Pose & Angle Coaching")
+                        lockedSection(title: "Makeup & Style Coaching")
                         lockedSection(title: "Composition & Background")
                         lockedSection(title: "Quick Wins - Try These Now!")
                         lockedSection(title: "Foundational Habits")
@@ -130,41 +125,54 @@ struct DetailedFeedbackView: View {
     // MARK: - Limited Preview
     
     private func limitedPreviewSection(_ analysis: PhotoAnalysisVariables) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
             if let summary = summaryText?.trimmingCharacters(in: .whitespacesAndNewlines), !summary.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("AI Summary (Preview)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(.white.opacity(0.7))
+                    Text("AI Summary")
+                        .font(.glowSubheading.weight(.semibold))
+                        .foregroundColor(GlowPalette.deepRose)
                     Text(summary)
-                        .font(.body.weight(.medium))
-                        .foregroundColor(.white)
+                        .font(GlowTypography.body(17, weight: .medium))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             
-            HStack(spacing: 12) {
-                previewMetricCard(
-                    icon: "sparkles",
-                    title: "Glow Score",
-                    value: String(format: "%.1f/10", analysis.overallGlowScore)
-                )
-                if let undertone = analysis.skinUndertone {
-                    previewMetricCard(
-                        icon: "drop.fill",
-                        title: "Undertone",
-                        value: undertone
-                    )
-                } else {
-                    previewMetricCard(
-                        icon: "lightbulb.max",
-                        title: "Lighting",
-                        value: String(format: "%.1f/10", analysis.lightingQuality)
-                    )
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Ratings")
+                    .font(.glowSubheading.weight(.semibold))
+                    .foregroundStyle(GlowPalette.deepRose)
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                    ForEach(Array(limitedMetrics(for: analysis).enumerated()), id: \.offset) { _, metric in
+                        previewMetricCard(
+                            icon: metric.icon,
+                            title: metric.title,
+                            value: metric.value
+                        )
+                    }
                 }
+            }
+            
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Quick Facts")
+                    .font(.glowSubheading.weight(.semibold))
+                    .foregroundStyle(GlowPalette.deepRose)
+                
+                VStack(spacing: 10) {
+                    if let faceShape = analysis.faceShape?.trimmingCharacters(in: .whitespacesAndNewlines), !faceShape.isEmpty {
+                        featureFactRow(icon: "face.smiling", title: "Face Shape", value: faceShape)
+                    }
+                    if let eyeColor = analysis.eyeColor?.trimmingCharacters(in: .whitespacesAndNewlines), !eyeColor.isEmpty {
+                        featureFactRow(icon: "eye.fill", title: "Eye Color", value: eyeColor)
+                    }
+                }
+                .padding(16)
+                .background(GlowPalette.softBeige.opacity(0.9))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
         }
         .padding()
-        .background(Color.white.opacity(0.12))
+        .background(GlowPalette.creamyWhite.opacity(0.12))
         .cornerRadius(24)
     }
     
@@ -172,24 +180,24 @@ struct DetailedFeedbackView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 Image(systemName: "lock.fill")
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(GlowPalette.deepRose.opacity(0.8))
                 Text(title)
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             ZStack {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.white.opacity(0.08))
+                    .fill(GlowPalette.creamyWhite.opacity(0.08))
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(Color.black.opacity(0.25))
                     .blur(radius: 6)
                 VStack(spacing: 8) {
                     Text("Locked in Full Analysis")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundColor(GlowPalette.deepRose.opacity(0.9))
                     Text("Subscribe to see your personalized insights.")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
+                        .font(.glowBody)
+                        .foregroundColor(GlowPalette.deepRose.opacity(0.7))
                 }
                 .padding()
             }
@@ -197,7 +205,7 @@ struct DetailedFeedbackView: View {
             .frame(height: 120)
         }
         .padding()
-        .background(Color.white.opacity(0.06))
+        .background(GlowPalette.creamyWhite.opacity(0.06))
         .cornerRadius(20)
     }
     
@@ -206,7 +214,7 @@ struct DetailedFeedbackView: View {
             SuperwallService.shared.registerEvent("post_paywall_education")
         } label: {
             Text("🔓 Unlock Full Analysis")
-                .font(.headline)
+                .font(.glowSubheading)
                 .padding()
                 .frame(maxWidth: .infinity)
                 .background(
@@ -219,7 +227,7 @@ struct DetailedFeedbackView: View {
                         endPoint: .trailing
                     )
                 )
-                .foregroundColor(.white)
+                .deepRoseText()
                 .cornerRadius(14)
         }
         .buttonStyle(.plain)
@@ -230,19 +238,64 @@ struct DetailedFeedbackView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .foregroundColor(.white)
+                    .deepRoseText()
                 Text(title.uppercased())
                     .font(.caption2.weight(.bold))
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(GlowPalette.deepRose.opacity(0.6))
             }
             Text(value)
                 .font(.headline.weight(.semibold))
-                .foregroundColor(.white)
+                .deepRoseText()
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.black.opacity(0.22))
         .cornerRadius(14)
+    }
+
+    private func limitedMetrics(for analysis: PhotoAnalysisVariables) -> [(icon: String, title: String, value: String)] {
+        func formatted(_ value: Double, total: Double = 10) -> String {
+            if total == 10 {
+                return String(format: "%.1f / 10", value)
+            } else {
+                return String(format: "%.1f", value)
+            }
+        }
+
+        return [
+            ("sparkles", "Glow Score", formatted(analysis.overallGlowScore)),
+            ("heart.fill", "Confidence", formatted(analysis.confidenceScore)),
+            ("faceid", "Facial Harmony", formatted(analysis.facialHarmonyScore)),
+            ("paintpalette", "Color Harmony", formatted(analysis.colorHarmony)),
+            ("rectangle.split.3x3", "Composition", formatted(analysis.overallComposition)),
+            ("light.max", "Lighting Quality", formatted(analysis.lightingQuality)),
+            ("triangle.fill", "Angle Definition", formatted(analysis.facialAngularityScore)),
+            ("drop.circle", "Skin Texture", formatted(analysis.skinTextureScore)),
+            ("figure.stand", "Pose Naturalness", formatted(analysis.poseNaturalness)),
+            ("camera.aperture", "Angle Flattery", formatted(analysis.angleFlatter)),
+            ("wand.and.stars", "Makeup Suitability", formatted(analysis.makeupSuitability)),
+            ("line.3.horizontal.decrease.circle", "Brows", formatted(analysis.eyebrowDensityScore)),
+            ("hanger", "Outfit Match", formatted(analysis.outfitColorMatch)),
+            ("sparkle.magnifyingglass", "Accessory Balance", formatted(analysis.accessoryBalance)),
+            ("photo.artframe", "Background", formatted(analysis.backgroundSuitability))
+        ]
+    }
+
+    private func featureFactRow(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.glowSubheading)
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(GlowTypography.caption.weight(.semibold))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
+                Text(value)
+                    .font(GlowTypography.body(17, weight: .semibold))
+                    .foregroundStyle(GlowPalette.deepRose)
+            }
+            Spacer(minLength: 0)
+        }
     }
     
     private func overviewSection(_ analysis: PhotoAnalysisVariables) -> some View {
@@ -251,10 +304,10 @@ struct DetailedFeedbackView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("AI Summary")
                         .font(.caption.weight(.semibold))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(GlowPalette.deepRose.opacity(0.7))
                     Text(summary)
                         .font(.body.weight(.medium))
-                        .foregroundColor(.white)
+                        .deepRoseText()
                 }
             }
             
@@ -265,7 +318,7 @@ struct DetailedFeedbackView: View {
             }
         }
         .padding()
-        .background(Color.white.opacity(0.12))
+        .background(GlowPalette.creamyWhite.opacity(0.12))
         .cornerRadius(24)
     }
     
@@ -276,7 +329,7 @@ struct DetailedFeedbackView: View {
                 .foregroundColor(.yellow)
             Text(summaryText ?? "We couldn't build a live analysis just now.")
                 .font(.body.weight(.medium))
-                .foregroundColor(.white)
+                .deepRoseText()
                 .multilineTextAlignment(.center)
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(personalizedTips, id: \.self) { tip in
@@ -284,7 +337,7 @@ struct DetailedFeedbackView: View {
                         Image(systemName: "sparkle")
                             .foregroundColor(.pink)
                         Text(tip)
-                            .foregroundColor(.white.opacity(0.9))
+                            .foregroundColor(GlowPalette.deepRose.opacity(0.9))
                     }
                     .font(.subheadline)
                 }
@@ -292,7 +345,7 @@ struct DetailedFeedbackView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding()
-        .background(Color.white.opacity(0.12))
+        .background(GlowPalette.creamyWhite.opacity(0.12))
         .cornerRadius(24)
     }
     
@@ -451,18 +504,18 @@ struct DetailedFeedbackView: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .symbolVariant(.fill)
-                    .foregroundColor(.white)
+                    .deepRoseText()
                 Text(title.uppercased())
                     .font(.caption2.weight(.bold))
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(GlowPalette.deepRose.opacity(0.6))
             }
             Text(value)
                 .font(.headline.weight(.semibold))
-                .foregroundColor(.white)
+                .deepRoseText()
             if let detail, !detail.isEmpty {
                 Text(detail)
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
+                    .font(.glowBody)
+                    .foregroundColor(GlowPalette.deepRose.opacity(0.7))
             }
         }
         .padding()
@@ -477,12 +530,12 @@ struct DetailedFeedbackView: View {
                 Image(systemName: "ruler.fill")
                     .foregroundColor(.pink)
                 Text("Facial Harmony Map")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             Text(analysis.featureBalanceDescription)
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
             
             HStack(spacing: 12) {
                 scoreBadge(title: "Harmony", value: analysis.facialHarmonyScore, accent: .pink)
@@ -495,7 +548,7 @@ struct DetailedFeedbackView: View {
             }
         }
         .padding()
-        .background(Color.white.opacity(0.1))
+        .background(GlowPalette.creamyWhite.opacity(0.1))
         .cornerRadius(22)
     }
     
@@ -505,13 +558,13 @@ struct DetailedFeedbackView: View {
                 Image(systemName: "drop.fill")
                     .foregroundColor(.cyan)
                 Text("Skin Texture Insight")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             scoreBadge(title: "Texture Score", value: analysis.skinTextureScore, accent: .cyan)
             Text(analysis.skinTextureDescription)
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
             if !analysis.skinConcernHighlights.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
@@ -522,7 +575,7 @@ struct DetailedFeedbackView: View {
             }
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.creamyWhite.opacity(0.08))
         .cornerRadius(20)
     }
     
@@ -532,17 +585,17 @@ struct DetailedFeedbackView: View {
                 Image(systemName: "eyeglasses")
                     .foregroundColor(.mint)
                 Text("Brows & Framing")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             scoreBadge(title: "Density Score", value: analysis.eyebrowDensityScore, accent: .mint)
             Text(analysis.eyebrowFeedback)
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.creamyWhite.opacity(0.08))
         .cornerRadius(20)
     }
     
@@ -552,8 +605,8 @@ struct DetailedFeedbackView: View {
                 Image(systemName: "list.bullet.rectangle")
                     .foregroundColor(.orange)
                 Text("Trait Breakdown")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             
             if !analysis.bestTraits.isEmpty {
@@ -567,7 +620,7 @@ struct DetailedFeedbackView: View {
             }
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.creamyWhite.opacity(0.08))
         .cornerRadius(20)
     }
     
@@ -577,8 +630,8 @@ struct DetailedFeedbackView: View {
                 Image(systemName: "map.fill")
                     .foregroundColor(.purple)
                 Text("Soft-Max Roadmap")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             
             ForEach(steps) { step in
@@ -592,12 +645,12 @@ struct DetailedFeedbackView: View {
                     }
                 }
                 .padding()
-                .background(Color.white.opacity(0.07))
+                .background(GlowPalette.creamyWhite.opacity(0.07))
                 .cornerRadius(18)
             }
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.creamyWhite.opacity(0.08))
         .cornerRadius(22)
     }
     
@@ -605,14 +658,14 @@ struct DetailedFeedbackView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title.uppercased())
                 .font(.caption2.weight(.bold))
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(String(format: "%.1f", value))
                     .font(.title3.weight(.bold))
                     .foregroundStyle(accent)
                 Text("/10")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .font(.glowBody)
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
             }
         }
         .padding()
@@ -625,13 +678,13 @@ struct DetailedFeedbackView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title.uppercased())
                 .font(.caption2.weight(.bold))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.55))
             Text(detail)
                 .font(.callout.weight(.semibold))
-                .foregroundStyle(.white)
+                .deepRoseText()
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.creamyWhite.opacity(0.08))
         .cornerRadius(16)
     }
     
@@ -643,7 +696,7 @@ struct DetailedFeedbackView: View {
                     .font(.subheadline)
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .deepRoseText()
             }
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(items, id: \.self) { item in
@@ -659,19 +712,19 @@ struct DetailedFeedbackView: View {
             if let number {
                 Text("\(number)")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(.white)
+                    .deepRoseText()
                     .frame(width: 22, height: 22)
                     .background(accent.opacity(0.3))
                     .cornerRadius(11)
             } else {
                 Image(systemName: icon)
-                    .font(.caption)
+                    .font(.glowBody)
                     .foregroundStyle(accent)
                     .frame(width: 18)
             }
             Text(text)
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.88))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.88))
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -701,15 +754,15 @@ struct DetailedFeedbackView: View {
             HStack(spacing: 12) {
                 Image(systemName: "paintpalette.fill")
                     .foregroundColor(.pink)
-                    .font(.title3)
+                    .font(.glowHeading)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(seasonTitle)
-                        .font(.headline)
-                        .foregroundStyle(.white)
+                        .font(.glowSubheading)
+                        .deepRoseText()
                     if let undertone = analysis.skinUndertone {
                         Text("Undertone: \(undertone)")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                     }
                 }
                 Spacer()
@@ -718,9 +771,9 @@ struct DetailedFeedbackView: View {
                         .font(.caption.weight(.semibold))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(Color.white.opacity(0.12))
+                        .background(GlowPalette.creamyWhite.opacity(0.12))
                         .clipShape(Capsule())
-                        .foregroundColor(.white)
+                        .deepRoseText()
                 }
             }
             
@@ -745,17 +798,17 @@ struct DetailedFeedbackView: View {
             }
             
             if let skinFeedback = analysis.skinToneFeedback {
-                Divider().overlay(Color.white.opacity(0.08))
+                Divider().overlay(GlowPalette.creamyWhite.opacity(0.08))
                 Text(skinFeedback)
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.9))
                     .fixedSize(horizontal: false, vertical: true)
             }
             
             if let hairFeedback = analysis.hairColorFeedback {
                 Text(hairFeedback)
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                     .fixedSize(horizontal: false, vertical: true)
             }
             
@@ -765,13 +818,13 @@ struct DetailedFeedbackView: View {
                         .foregroundColor(.pink)
                     Text(makeupLine)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
                 }
                 .padding(.top, 4)
             }
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.creamyWhite.opacity(0.08))
         .cornerRadius(22)
     }
     
@@ -788,7 +841,7 @@ struct DetailedFeedbackView: View {
                     .foregroundColor(accent)
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .deepRoseText()
             }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 16)], spacing: 16) {
                 ForEach(swatches) { swatch in
@@ -892,7 +945,7 @@ struct DetailedFeedbackView: View {
         if normalized.contains("tan") || normalized.contains("camel") {
             return color(205, 170, 125)
         }
-        return Color.white.opacity(0.18)
+        return GlowPalette.creamyWhite.opacity(0.18)
     }
     
     private func makeupCaption(for analysis: PhotoAnalysisVariables) -> String {
@@ -947,15 +1000,15 @@ struct DetailedFeedbackView: View {
                 Image(systemName: "leaf.fill")
                     .foregroundColor(.green)
                 Text("Foundational Habits")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
                 if !isAIProvided {
                     Text("auto-suggested")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.5))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.white.opacity(0.08))
+                        .background(GlowPalette.creamyWhite.opacity(0.08))
                         .clipShape(Capsule())
                 }
             }
@@ -966,7 +1019,7 @@ struct DetailedFeedbackView: View {
             }
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.creamyWhite.opacity(0.08))
         .cornerRadius(20)
     }
     
@@ -989,18 +1042,18 @@ struct DetailedFeedbackView: View {
                         .frame(width: 56, height: 56)
                         .overlay(
                             Circle()
-                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                .stroke(GlowPalette.creamyWhite.opacity(0.2), lineWidth: 1)
                         )
                         .shadow(color: .black.opacity(0.15), radius: 6, y: 4)
                     if !isRecommended {
                         Image(systemName: "xmark")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(.white)
+                            .deepRoseText()
                     }
                 }
                 Text(label)
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.9))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .frame(maxWidth: 80)
@@ -1013,7 +1066,7 @@ struct DetailedFeedbackView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Personalized Tips")
                 .font(.caption.weight(.semibold))
-                .foregroundColor(.white.opacity(0.7))
+                .foregroundColor(GlowPalette.deepRose.opacity(0.7))
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(personalizedTips, id: \.self) { tip in
                     HStack(alignment: .top, spacing: 8) {
@@ -1021,7 +1074,7 @@ struct DetailedFeedbackView: View {
                             .foregroundColor(.pink)
                         Text(tip)
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.white)
+                            .deepRoseText()
                     }
                 }
             }
@@ -1040,10 +1093,10 @@ struct DetailedFeedbackView: View {
             HStack {
                 Image(systemName: icon)
                     .foregroundColor(color)
-                    .font(.title3)
+                    .font(.glowHeading)
                 Text(title)
-                    .font(.headline)
-                    .foregroundColor(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
                 
                 if let score = score {
                     Spacer()
@@ -1059,11 +1112,11 @@ struct DetailedFeedbackView: View {
             
             Text(feedback)
                 .font(.subheadline)
-                .foregroundColor(.white.opacity(0.9))
+                .foregroundColor(GlowPalette.deepRose.opacity(0.9))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding()
-        .background(Color.white.opacity(0.1))
+        .background(GlowPalette.creamyWhite.opacity(0.1))
         .cornerRadius(16)
     }
     
@@ -1078,27 +1131,27 @@ struct DetailedFeedbackView: View {
                 Image(systemName: icon)
                     .foregroundColor(accent)
                 Text(title)
-                    .font(.headline)
-                    .foregroundColor(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             VStack(spacing: 12) {
                 ForEach(tips) { tip in
                     VStack(alignment: .leading, spacing: 8) {
                         Text(tip.title)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.white)
+                            .deepRoseText()
                         Text(tip.body)
                             .font(.footnote)
-                            .foregroundColor(.white.opacity(0.85))
+                            .foregroundColor(GlowPalette.deepRose.opacity(0.85))
                     }
                     .padding()
-                    .background(Color.white.opacity(0.09))
+                    .background(GlowPalette.creamyWhite.opacity(0.09))
                     .cornerRadius(16)
                 }
             }
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.creamyWhite.opacity(0.08))
         .cornerRadius(20)
     }
     
@@ -1108,28 +1161,28 @@ struct DetailedFeedbackView: View {
                 Image(systemName: "person.3.sequence")
                     .foregroundColor(.purple)
                 Text("Celebrity Vibe Matches")
-                    .font(.headline)
-                    .foregroundColor(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             ForEach(matches) { match in
                 VStack(alignment: .leading, spacing: 10) {
                     Text(match.name)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.white)
+                        .deepRoseText()
                     Text(match.descriptor)
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
+                        .font(.glowBody)
+                        .foregroundColor(GlowPalette.deepRose.opacity(0.7))
                     Text(match.whyItWorks)
                         .font(.footnote)
-                        .foregroundColor(.white.opacity(0.85))
+                        .foregroundColor(GlowPalette.deepRose.opacity(0.85))
                 }
                 .padding()
-                .background(Color.white.opacity(0.08))
+                .background(GlowPalette.creamyWhite.opacity(0.08))
                 .cornerRadius(18)
             }
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.creamyWhite.opacity(0.08))
         .cornerRadius(20)
     }
     
@@ -1139,8 +1192,8 @@ struct DetailedFeedbackView: View {
                 Image(systemName: "safari")
                     .foregroundColor(.mint)
                 Text("Pinterest Search Generator")
-                    .font(.headline)
-                    .foregroundColor(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             VStack(spacing: 12) {
                 ForEach(ideas) { idea in
@@ -1149,7 +1202,7 @@ struct DetailedFeedbackView: View {
             }
         }
         .padding()
-        .background(Color.white.opacity(0.08))
+        .background(GlowPalette.creamyWhite.opacity(0.08))
         .cornerRadius(20)
     }
     
@@ -1157,7 +1210,7 @@ struct DetailedFeedbackView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(idea.label)
                 .font(.subheadline.weight(.semibold))
-                .foregroundColor(.white)
+                .deepRoseText()
             
             HStack(spacing: 12) {
                 Button {
@@ -1166,8 +1219,8 @@ struct DetailedFeedbackView: View {
                     Label("Copy", systemImage: "doc.on.doc")
                         .font(.caption.weight(.semibold))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.white.opacity(0.18))
+                .buttonStyle(GlowFilledButtonStyle())
+                .tint(GlowPalette.creamyWhite.opacity(0.18))
                 
                 if let url = idea.encodedURL {
                     Button {
@@ -1176,7 +1229,7 @@ struct DetailedFeedbackView: View {
                         Label("Open in Pinterest", systemImage: "arrow.up.right")
                             .font(.caption.weight(.semibold))
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(GlowFilledButtonStyle())
                     .tint(Color(red: 0.94, green: 0.34, blue: 0.56).opacity(0.6))
                 }
             }
@@ -1191,24 +1244,24 @@ struct DetailedFeedbackView: View {
             HStack {
                 Image(systemName: "bolt.fill")
                     .foregroundColor(.yellow)
-                    .font(.title3)
+                    .font(.glowHeading)
                 Text("Quick Wins - Try These Now!")
-                    .font(.headline)
-                    .foregroundColor(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             
             ForEach(Array(analysis.quickWins.enumerated()), id: \.offset) { index, win in
                 HStack(alignment: .top, spacing: 12) {
                     Text("\(index + 1)")
                         .font(.caption.bold())
-                        .foregroundColor(.white)
+                        .deepRoseText()
                         .frame(width: 24, height: 24)
                         .background(Color.yellow.opacity(0.3))
                         .cornerRadius(12)
                     
                     Text(win)
                         .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundColor(GlowPalette.deepRose.opacity(0.9))
                 }
             }
         }

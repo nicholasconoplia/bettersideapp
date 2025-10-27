@@ -98,6 +98,10 @@ struct AnalyzeContainerView: View {
                         .padding(.horizontal, 24)
                 }
             }
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(GlowPalette.roseStroke(), lineWidth: 1.2)
+            )
             .shadow(
                 color: GlowShadow.soft.color,
                 radius: GlowShadow.soft.radius,
@@ -127,7 +131,7 @@ struct AnalyzeContainerView: View {
             } label: {
                 HStack(spacing: 14) {
                     Image(systemName: "square.stack.3d.up.fill")
-                        .font(.headline)
+                        .font(.glowSubheading)
                     Text("Start Glow Scan")
                         .font(GlowTypography.button)
                 }
@@ -239,7 +243,7 @@ private struct StructuredPhotoUploadView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .tint(.white)
+                    .tint(GlowPalette.roseGold)
                 }
             }
             .navigationTitle("Upload Breakdown")
@@ -258,13 +262,17 @@ private struct StructuredPhotoUploadView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Soft-Max Glow Scan")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
+                .deepRoseText()
             Text("Upload two focused shots so the AI can map facial harmony and skin health. Keep lighting consistent and wipe the camera lens before each capture.")
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
         }
         .padding()
-        .background(Color.white.opacity(0.12))
+        .background(GlowPalette.softBeige)
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(GlowPalette.roseStroke(), lineWidth: 1)
+        )
         .cornerRadius(24)
     }
     
@@ -272,15 +280,15 @@ private struct StructuredPhotoUploadView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center, spacing: 12) {
                 Image(systemName: stage.systemImage)
-                    .foregroundStyle(.white)
-                    .font(.title3)
+                    .deepRoseText()
+                    .font(.glowHeading)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(stage.title)
-                        .font(.headline)
-                        .foregroundStyle(.white)
+                        .font(.glowSubheading)
+                        .deepRoseText()
                     Text(stage.whyItMatters)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.6))
+                        .font(.glowBody)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
                 }
                 Spacer()
                 if let data = data(for: stage) {
@@ -296,7 +304,7 @@ private struct StructuredPhotoUploadView: View {
             
             Text(stage.instruction)
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                 .fixedSize(horizontal: false, vertical: true)
             
             previewView(for: stage)
@@ -304,7 +312,11 @@ private struct StructuredPhotoUploadView: View {
             controlRow(for: stage)
         }
         .padding()
-        .background(Color.white.opacity(0.1))
+        .background(GlowPalette.softBeige)
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(GlowPalette.roseStroke(), lineWidth: 1)
+        )
         .cornerRadius(22)
     }
     
@@ -319,28 +331,32 @@ private struct StructuredPhotoUploadView: View {
                 .cornerRadius(18)
                 .overlay(
                     RoundedRectangle(cornerRadius: 18)
-                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                        .stroke(GlowPalette.roseStroke(0.45), lineWidth: 1)
                 )
-                .shadow(color: .black.opacity(0.25), radius: 12, y: 8)
+                .shadow(color: GlowShadow.soft.color.opacity(0.6), radius: 8, y: 6)
         } else {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.05))
+                .fill(GlowPalette.softOverlay(0.55))
                 .frame(height: 180)
                 .overlay(
                     VStack(spacing: 10) {
                         if isLoadingStage == stage {
                             ProgressView()
                                 .progressViewStyle(.circular)
-                                .tint(.white)
+                                .tint(GlowPalette.roseGold)
                         } else {
                             Image(systemName: "camera.fill")
-                                .font(.title2)
-                                .foregroundStyle(.white.opacity(0.8))
+                                .font(.glowHeading)
+                                .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
                         }
                         Text("No photo yet")
                             .font(.caption.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
                     }
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(GlowPalette.roseStroke(0.35), lineWidth: 1)
                 )
         }
     }
@@ -352,7 +368,7 @@ private struct StructuredPhotoUploadView: View {
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(GlowFilledButtonStyle())
             .tint(GlowPalette.roseGold)
             .disabled(isLoadingStage != nil)
             
@@ -363,7 +379,7 @@ private struct StructuredPhotoUploadView: View {
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(GlowFilledButtonStyle())
             .tint(GlowPalette.deepRose)
             .disabled(isLoadingStage != nil)
             
@@ -414,7 +430,7 @@ private struct StructuredPhotoUploadView: View {
             } label: {
                 Text("Reset Selections")
                     .font(.footnote.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
             }
             .disabled(faceData == nil && skinData == nil)
         }

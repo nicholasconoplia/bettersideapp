@@ -38,7 +38,7 @@ struct SubscriptionGateView: View {
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .deepRoseText()
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                     }
@@ -56,7 +56,7 @@ struct SubscriptionGateView: View {
                 Button(action: onBack) {
                     Image(systemName: "chevron.backward")
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                         .padding()
                 }
             }
@@ -71,12 +71,12 @@ struct SubscriptionGateView: View {
             Text("Your personalized glow plan is ready 🌟")
                 .font(.title2.bold())
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white)
+                .deepRoseText()
 
             Text("You told us exactly where glow feels hard—we’ll handle the roadmap. Pick the plan that matches your pace.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
                 .padding(.horizontal, 24)
         }
     }
@@ -84,23 +84,23 @@ struct SubscriptionGateView: View {
     private var previewCard: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text(preview.headline)
-                .font(.headline)
-                .foregroundStyle(.white)
+                .font(.glowSubheading)
+                .deepRoseText()
 
             if !preview.insightBullets.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("You shared")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                     ForEach(preview.insightBullets, id: \.self) { line in
                         HStack(alignment: .top, spacing: 10) {
                             Circle()
-                                .fill(Color.white.opacity(0.6))
+                                .fill(GlowPalette.creamyWhite.opacity(0.6))
                                 .frame(width: 6, height: 6)
                                 .padding(.top, 6)
                             Text(line)
                                 .font(.footnote)
-                                .foregroundStyle(.white.opacity(0.9))
+                                .foregroundStyle(GlowPalette.deepRose.opacity(0.9))
                         }
                     }
                 }
@@ -110,16 +110,16 @@ struct SubscriptionGateView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("BetterSide will")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                     ForEach(preview.solutionBullets, id: \.self) { line in
                         HStack(alignment: .top, spacing: 10) {
                             Image(systemName: "sparkle")
                                 .font(.footnote)
-                                .foregroundStyle(.white.opacity(0.85))
+                                .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                                 .padding(.top, 4)
                             Text(line)
                                 .font(.footnote)
-                                .foregroundStyle(.white)
+                                .deepRoseText()
                         }
                     }
                 }
@@ -128,10 +128,10 @@ struct SubscriptionGateView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(0.12))
+                .fill(GlowPalette.creamyWhite.opacity(0.12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 28)
-                        .stroke(Color.white.opacity(0.2))
+                        .stroke(GlowPalette.creamyWhite.opacity(0.2))
                 )
         )
         .padding(.horizontal, 20)
@@ -140,8 +140,8 @@ struct SubscriptionGateView: View {
     private var planPicker: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Choose your plan")
-                .font(.headline)
-                .foregroundStyle(.white)
+                .font(.glowSubheading)
+                .deepRoseText()
 
             ForEach(plans) { plan in
                 PaywallPlanCard(plan: plan, isSelected: plan == selectedPlan)
@@ -158,23 +158,23 @@ struct SubscriptionGateView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Activate 3-day free trial")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .deepRoseText()
                         Text("We’ll only bill after your trial ends. Cancel anytime in Settings → Subscriptions.")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.7))
+                            .font(.glowBody)
+                            .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                     }
                 }
                 .toggleStyle(SwitchToggleStyle(tint: Color(red: 0.94, green: 0.34, blue: 0.56)))
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(Color.white.opacity(0.12))
+                        .fill(GlowPalette.creamyWhite.opacity(0.12))
                 )
             }
 
             Text("No commitment. Cancel anytime.")
                 .font(.footnote.weight(.medium))
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
         }
         .padding(.horizontal, 20)
     }
@@ -183,7 +183,7 @@ struct SubscriptionGateView: View {
         VStack(spacing: 12) {
             Text("💰 What you're actually spending")
                 .font(.title3.bold())
-                .foregroundStyle(.white)
+                .deepRoseText()
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             valueComparison
@@ -196,15 +196,15 @@ struct SubscriptionGateView: View {
         return VStack(alignment: .leading, spacing: 16) {
             Text(copy.headline)
                 .font(.body.weight(.bold))
-                .foregroundStyle(.white)
+                .deepRoseText()
 
             Text(copy.subtitle)
                 .font(.footnote.weight(.medium))
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
 
             Divider()
-                .background(Color.white.opacity(0.3))
+                .background(GlowPalette.creamyWhite.opacity(0.3))
                 .padding(.vertical, 4)
 
             HStack(alignment: .top, spacing: 12) {
@@ -216,7 +216,7 @@ struct SubscriptionGateView: View {
                 )
                 
                 Rectangle()
-                    .fill(Color.white.opacity(0.2))
+                    .fill(GlowPalette.creamyWhite.opacity(0.2))
                     .frame(width: 1)
                     .padding(.vertical, 4)
                 
@@ -230,7 +230,7 @@ struct SubscriptionGateView: View {
             
             Text("Real talk: You'll spend way more on coffee this month than a year of BetterSide. But coffee lasts 20 minutes. This? This lasts forever. 💅")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.9))
                 .italic()
                 .padding(.top, 8)
                 .fixedSize(horizontal: false, vertical: true)
@@ -241,8 +241,8 @@ struct SubscriptionGateView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.18),
-                            Color.white.opacity(0.12)
+                            GlowPalette.creamyWhite.opacity(0.18),
+                            GlowPalette.creamyWhite.opacity(0.12)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -251,7 +251,7 @@ struct SubscriptionGateView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                .stroke(GlowPalette.creamyWhite.opacity(0.25), lineWidth: 1)
         )
     }
 
@@ -263,7 +263,7 @@ struct SubscriptionGateView: View {
                     .foregroundStyle(accentColor)
                 Text(title)
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(.white)
+                    .deepRoseText()
                     .textCase(.uppercase)
             }
             .padding(.bottom, 2)
@@ -275,8 +275,8 @@ struct SubscriptionGateView: View {
                         .frame(width: 4, height: 4)
                         .padding(.top, 5)
                     Text(line)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .font(.glowBody)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -303,7 +303,7 @@ struct SubscriptionGateView: View {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(.circular)
-                        .tint(.white)
+                        .tint(GlowPalette.roseGold)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 8) {
@@ -311,16 +311,16 @@ struct SubscriptionGateView: View {
                             .font(.headline.weight(.bold))
                         Text(selectedPlan.primaryBillingAmount)
                             .font(.headline.weight(.bold))
-                            .foregroundStyle(.white.opacity(0.9))
+                            .foregroundStyle(GlowPalette.deepRose.opacity(0.9))
                     }
                     Text(selectedPlan.ctaSubtitle(includeTrial: includeTrial))
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.8))
+                        .font(.glowBody)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
                 }
                 Spacer()
                 Image(systemName: "arrow.right.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(.white)
+                    .font(.glowHeading)
+                    .deepRoseText()
             }
             .padding()
             .frame(maxWidth: .infinity)
@@ -329,7 +329,7 @@ struct SubscriptionGateView: View {
                     .fill(Color(red: 0.94, green: 0.34, blue: 0.56))
                     .shadow(color: Color.black.opacity(0.3), radius: 18, y: 12)
             )
-            .foregroundStyle(.white)
+            .deepRoseText()
             .padding(.horizontal, 20)
         }
     }
@@ -360,21 +360,21 @@ struct SubscriptionGateView: View {
                     if isRestoring {
                         ProgressView()
                             .progressViewStyle(.circular)
-                            .tint(.white)
+                            .tint(GlowPalette.roseGold)
                     }
                     Text("Restore Purchase")
                         .font(.footnote.weight(.medium))
                         .underline()
                 }
                 .padding(.top, 4)
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.9))
             }
 
             if let status = subscriptionManager.statusMessage {
                 Text(status)
                     .font(.caption.weight(.semibold))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                     .padding(.top, 2)
             }
         }
@@ -392,12 +392,12 @@ struct SubscriptionGateView: View {
                     Text("Terms of Use")
                         .font(.caption.weight(.medium))
                         .underline()
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                 }
                 
                 Text("•")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .font(.glowBody)
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.5))
                 
                 Button {
                     if let url = URL(string: "https://betterside.vercel.app/privacy.html") {
@@ -407,13 +407,13 @@ struct SubscriptionGateView: View {
                     Text("Privacy Policy")
                         .font(.caption.weight(.medium))
                         .underline()
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                 }
             }
             
             Text("By subscribing, you agree to our Terms of Use and Privacy Policy")
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
@@ -426,7 +426,7 @@ struct SubscriptionGateView: View {
         } label: {
             Text("Maybe later")
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
         }
     }
 }
@@ -439,7 +439,7 @@ private struct PaywallPlanCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(plan.title)
-                    .font(.headline)
+                    .font(.glowSubheading)
                 Spacer()
                 if let badge = plan.badge {
                     Text(badge)
@@ -448,7 +448,7 @@ private struct PaywallPlanCard: View {
                         .padding(.vertical, 4)
                         .background(
                             Capsule()
-                                .fill(Color.white.opacity(0.25))
+                                .fill(GlowPalette.creamyWhite.opacity(0.25))
                         )
                 }
             }
@@ -472,11 +472,11 @@ private struct PaywallPlanCard: View {
                 HStack(spacing: 6) {
                     Text(original)
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                         .strikethrough(true)
                     Text(plan.savingsCopy)
                         .font(.footnote.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                 }
             }
 
@@ -488,11 +488,11 @@ private struct PaywallPlanCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(isSelected ? Color(red: 0.29, green: 0.15, blue: 0.48) : Color.white.opacity(0.15))
+                .fill(isSelected ? Color(red: 0.29, green: 0.15, blue: 0.48) : GlowPalette.creamyWhite.opacity(0.15))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(isSelected ? Color.white.opacity(0.4) : Color.clear, lineWidth: 1.5)
+                .stroke(isSelected ? GlowPalette.creamyWhite.opacity(0.4) : Color.clear, lineWidth: 1.5)
         )
     }
 }
@@ -649,11 +649,11 @@ struct SubscriptionReconsiderationView: View {
             Text("Glow first, sip coffee second ☕️✨")
                 .font(.title.bold())
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white)
+                .deepRoseText()
             Text("Take 30 seconds to see how BetterSide stacks up against the little splurges that disappear by tomorrow.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
         }
     }
 
@@ -662,18 +662,18 @@ struct SubscriptionReconsiderationView: View {
         return VStack(alignment: .leading, spacing: 20) {
             Text(plan.title.uppercased())
                 .font(.caption.weight(.bold))
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
             Text(copy.headline)
                 .font(.title3.bold())
-                .foregroundStyle(.white)
+                .deepRoseText()
                 .fixedSize(horizontal: false, vertical: true)
             Text(copy.subtitle)
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
 
             Divider()
-                .background(Color.white.opacity(0.2))
+                .background(GlowPalette.creamyWhite.opacity(0.2))
 
             VStack(alignment: .leading, spacing: 16) {
                 comparisonColumn(
@@ -693,21 +693,21 @@ struct SubscriptionReconsiderationView: View {
             if plan.supportsTrial {
                 Text("3-day free trial, then \(plan.primaryBillingAmount)/year. Cancel anytime before it renews.")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
             } else {
                 Text("\(plan.primaryBillingAmount) billed monthly. Cancel anytime before the next renewal.")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
             }
         }
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(0.14))
+                .fill(GlowPalette.creamyWhite.opacity(0.14))
                 .overlay(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Color.white.opacity(0.18))
+                        .stroke(GlowPalette.creamyWhite.opacity(0.18))
                 )
         )
     }
@@ -720,7 +720,7 @@ struct SubscriptionReconsiderationView: View {
                     .foregroundStyle(accentColor)
                 Text(title)
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(.white)
+                    .deepRoseText()
                     .textCase(.uppercase)
             }
             ForEach(lines, id: \.self) { line in
@@ -730,8 +730,8 @@ struct SubscriptionReconsiderationView: View {
                         .frame(width: 5, height: 5)
                         .padding(.top, 5)
                     Text(line)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.9))
+                        .font(.glowBody)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.9))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -745,13 +745,13 @@ struct SubscriptionReconsiderationView: View {
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "arrow.uturn.left.circle.fill")
-                        .font(.title3)
+                        .font(.glowHeading)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Okay, show me the plans again")
-                            .font(.headline)
+                            .font(.glowSubheading)
                         Text("I'm ready to compare options one more time.")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.8))
+                            .font(.glowBody)
+                            .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
                     }
                     Spacer()
                 }
@@ -761,7 +761,7 @@ struct SubscriptionReconsiderationView: View {
                         .fill(Color(red: 0.94, green: 0.34, blue: 0.56))
                         .shadow(color: Color.black.opacity(0.25), radius: 16, y: 12)
                 )
-                .foregroundStyle(.white)
+                .deepRoseText()
             }
 
             Button {
@@ -769,12 +769,12 @@ struct SubscriptionReconsiderationView: View {
             } label: {
                 Text("No, I'm sure I don't want to glow up")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                     .padding(.vertical, 12)
                     .frame(maxWidth: .infinity)
                     .overlay(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.35))
+                            .stroke(GlowPalette.creamyWhite.opacity(0.35))
                     )
             }
             .padding(.top, 4)

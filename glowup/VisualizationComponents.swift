@@ -24,10 +24,10 @@ struct StudioContainerView: View {
                 VStack(spacing: 16) {
                     Text("Studio (Locked)")
                         .font(.title2.bold())
-                        .foregroundStyle(.white)
+                        .deepRoseText()
                     Text("Try on hairstyles, makeup, and outfits powered by your analysis.")
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .font(GlowTypography.glowBody)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
 
@@ -35,20 +35,11 @@ struct StudioContainerView: View {
                         SuperwallService.shared.registerEvent("subscription_paywall")
                     } label: {
                         Text("🔓 Unlock Full Analysis")
-                            .font(.headline)
+                            .font(GlowTypography.glowButton)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(
-                                LinearGradient(
-                                    colors: [
-                                        Color(red: 0.94, green: 0.34, blue: 0.56),
-                                        Color(red: 1.0, green: 0.6, blue: 0.78)
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .foregroundColor(.white)
+                            .background(GlowGradient.blushAccent)
+                            .foregroundStyle(GlowPalette.deepRose)
                             .cornerRadius(14)
                             .padding(.horizontal)
                     }
@@ -56,7 +47,7 @@ struct StudioContainerView: View {
                 }
                 .padding(.vertical, 24)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black.opacity(0.45))
+                .background(GlowPalette.creamOverlay(0.92))
                 .ignoresSafeArea()
             }
         }
@@ -86,16 +77,16 @@ struct PresetCard: View {
                     if let icon = option.iconName {
                         Image(systemName: icon)
                             .font(.headline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(GlowPalette.deepRose)
                             .padding(10)
-                            .background(Color.white.opacity(0.12))
+                            .background(GlowPalette.blushOverlay(0.35))
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     } else {
                         Image(systemName: category.systemImageName)
                             .font(.title3.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(GlowPalette.deepRose)
                             .padding(10)
-                            .background(Color.white.opacity(0.12))
+                            .background(GlowPalette.blushOverlay(0.35))
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
 
@@ -108,20 +99,20 @@ struct PresetCard: View {
                             .frame(width: 22, height: 22)
                             .overlay(
                                 Circle()
-                                    .stroke(.white.opacity(0.65), lineWidth: 1)
+                                    .stroke(GlowPalette.roseStroke(0.5), lineWidth: 1)
                             )
                     }
                 }
 
                 Text(option.title)
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
                     .multilineTextAlignment(.leading)
 
                 if !option.subtitle.isEmpty {
                     Text(option.subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.75))
+                        .font(.glowBody)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                         .lineLimit(2)
                 }
             }
@@ -129,11 +120,11 @@ struct PresetCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color.white.opacity(0.08))
+                    .fill(GlowPalette.softOverlay(0.85))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    .stroke(GlowPalette.roseStroke(), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -154,9 +145,9 @@ struct EditThumbnail: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(isActive ? Color.pink : Color.white.opacity(0.35), lineWidth: isActive ? 3 : 1)
+                        .stroke(isActive ? GlowPalette.roseGold : GlowPalette.roseStroke(0.4), lineWidth: isActive ? 3 : 1)
                 )
-                .shadow(color: .black.opacity(isActive ? 0.35 : 0.2), radius: isActive ? 12 : 6, y: 6)
+                .shadow(color: GlowShadow.soft.color.opacity(isActive ? 0.9 : 0.6), radius: isActive ? 12 : 6, y: 6)
         }
         .buttonStyle(.plain)
     }
@@ -189,19 +180,19 @@ struct PromptInputBar: View {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(.circular)
-                        .tint(GlowPalette.creamyWhite)
+                        .tint(GlowPalette.deepRose)
                         .frame(width: 26, height: 26)
                 } else {
                     Image(systemName: "paperplane.fill")
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(GlowPalette.creamyWhite)
+                        .foregroundStyle(GlowPalette.deepRose)
                 }
             }
             .disabled(isLoading || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(GlowPalette.roseGold)
+                    .fill(GlowPalette.blushPink)
             )
             .opacity(isLoading ? 0.6 : 1)
         }
@@ -223,13 +214,13 @@ struct ImageSourcePicker: View {
     var body: some View {
         VStack(spacing: 20) {
             Capsule()
-                .fill(GlowPalette.creamyWhite.opacity(0.35))
+                .fill(GlowPalette.roseGold.opacity(0.4))
                 .frame(width: 40, height: 4)
                 .padding(.top, 10)
 
             Text("Start a Visualization")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(GlowPalette.creamyWhite)
+                .foregroundStyle(GlowPalette.deepRose)
 
             VStack(spacing: 12) {
                 pickerButton(
@@ -259,7 +250,8 @@ struct ImageSourcePicker: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(GlowPalette.deepRose.opacity(0.95))
+                .fill(GlowPalette.creamyWhite)
+                .shadow(color: GlowShadow.soft.color, radius: GlowShadow.soft.radius, x: GlowShadow.soft.x, y: GlowShadow.soft.y)
         )
         .padding()
     }
@@ -274,29 +266,33 @@ struct ImageSourcePicker: View {
             HStack(spacing: 16) {
                 Image(systemName: icon)
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(GlowPalette.creamyWhite)
+                    .foregroundStyle(GlowPalette.deepRose)
                     .frame(width: 48, height: 48)
-                    .background(GlowPalette.creamyWhite.opacity(0.12))
+                    .background(GlowPalette.blushOverlay(0.35))
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.headline)
-                        .foregroundStyle(GlowPalette.creamyWhite)
+                        .font(.glowSubheading)
+                        .foregroundStyle(GlowPalette.deepRose)
                     Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(GlowPalette.creamyWhite.opacity(0.8))
+                        .font(.glowBody)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                         .lineLimit(2)
                 }
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .foregroundStyle(GlowPalette.creamyWhite.opacity(0.6))
+                    .foregroundStyle(GlowPalette.roseGold.opacity(0.6))
                     .font(.body.weight(.semibold))
             }
             .padding()
-            .background(GlowPalette.creamyWhite.opacity(0.1))
+            .background(GlowPalette.softOverlay(0.85))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(GlowPalette.roseStroke(), lineWidth: 1)
+            )
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -310,16 +306,16 @@ struct LoadingOverlay: View {
         VStack(spacing: 16) {
             ProgressView()
                 .progressViewStyle(.circular)
-                .tint(.white)
+                .tint(GlowPalette.roseGold)
                 .scaleEffect(1.3)
 
             Text(label)
-                .font(.headline)
-                .foregroundStyle(.white)
+                .font(.glowSubheading)
+                .deepRoseText()
         }
         .padding(28)
         .frame(maxWidth: .infinity)
-        .background(Color.black.opacity(0.45))
+        .background(GlowPalette.softOverlay(0.9))
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .padding(.horizontal, 40)
     }

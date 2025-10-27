@@ -9,8 +9,11 @@ import SwiftUI
 
 /// Displays comprehensive photo analysis with all 27 variables
 struct DetailedAnalysisView: View {
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @AppStorage("hasUsedFreeScan") private var hasUsedFreeScan = false
     let analysis: PhotoAnalysisVariables?
     let isFallback: Bool
+    let summary: String?
     
     init() {
         // Load from UserDefaults
@@ -21,54 +24,59 @@ struct DetailedAnalysisView: View {
             self.analysis = nil
         }
         self.isFallback = UserDefaults.standard.bool(forKey: "LatestAnalysisIsFallback")
+        self.summary = UserDefaults.standard.string(forKey: "LatestAnalysisSummary")
     }
     
     var body: some View {
         ScrollView {
             if let analysis = analysis {
-                VStack(spacing: 24) {
-                    // Overall Scores Header
-                    overallScoresSection(analysis)
-                    
-                    // Physical Features
-                    VStack(alignment: .leading, spacing: 12) {
-                        sectionHeader(title: "Your Features", icon: "person.fill", color: .purple)
+                if isLimitedExperience {
+                    limitedAnalysisContent(analysis)
+                } else {
+                    VStack(spacing: 24) {
+                        // Overall Scores Header
+                        overallScoresSection(analysis)
                         
-                        VStack(spacing: 8) {
-                            if let faceShape = analysis.faceShape {
-                                infoRow(title: "Face Shape", value: faceShape)
+                        // Physical Features
+                        VStack(alignment: .leading, spacing: 12) {
+                            sectionHeader(title: "Your Features", icon: "person.fill", color: .purple)
+                            
+                            VStack(spacing: 8) {
+                                if let faceShape = analysis.faceShape {
+                                    infoRow(title: "Face Shape", value: faceShape)
+                                }
+                                if let skinUndertone = analysis.skinUndertone {
+                                    infoRow(title: "Skin Undertone", value: skinUndertone)
+                                }
+                                if let eyeColor = analysis.eyeColor {
+                                    infoRow(title: "Eye Color", value: eyeColor)
+                                }
+                                if let hairColor = analysis.hairColor {
+                                    infoRow(title: "Hair Color", value: hairColor)
+                                }
                             }
-                            if let skinUndertone = analysis.skinUndertone {
-                                infoRow(title: "Skin Undertone", value: skinUndertone)
-                            }
-                            if let eyeColor = analysis.eyeColor {
-                                infoRow(title: "Eye Color", value: eyeColor)
-                            }
-                            if let hairColor = analysis.hairColor {
-                                infoRow(title: "Hair Color", value: hairColor)
-                            }
+                            .padding()
+                            .background(GlowPalette.softBeige)
+                            .cornerRadius(16)
                         }
-                        .padding()
-                        .background(Color.white.opacity(0.1))
-                        .cornerRadius(16)
+                        
+                        // Color Analysis
+                        colorAnalysisSection(analysis)
+                        
+                        // Lighting Analysis
+                        lightingSection(analysis)
+                        
+                        // Style & Presentation
+                        styleSection(analysis)
+                        
+                        // Posing & Expression
+                        posingSection(analysis)
+                        
+                        // Actionable Insights
+                        insightsSection(analysis)
                     }
-                    
-                    // Color Analysis
-                    colorAnalysisSection(analysis)
-                    
-                    // Lighting Analysis
-                    lightingSection(analysis)
-                    
-                    // Style & Presentation
-                    styleSection(analysis)
-                    
-                    // Posing & Expression
-                    posingSection(analysis)
-                    
-                    // Actionable Insights
-                    insightsSection(analysis)
+                    .padding()
                 }
-                .padding()
             } else if isFallback {
                 fallbackState
             } else {
@@ -80,6 +88,209 @@ struct DetailedAnalysisView: View {
     }
     
     // MARK: - Sections
+    
+    private func limitedAnalysisContent(_ analysis: PhotoAnalysisVariables) -> some View {
+        VStack(spacing: 24) {
+            limitedSummarySection()
+            limitedRatingsSection(analysis)
+            limitedQuickFactsSection(analysis)
+            
+            ForEach(limitedLockedSectionTitles, id: \.self) { title in
+                limitedLockedSection(title: title)
+            }
+            
+            limitedUnlockButton
+        }
+        .padding()
+    }
+    
+    private var limitedLockedSectionTitles: [String] {
+        [
+            "Facial Harmony Map",
+            "Skin Texture Insight",
+            "Brows & Framing",
+            "Trait Breakdown",
+            "Soft-Max Roadmap",
+            "Seasonal Color Palette",
+            "Pose & Angle Coaching",
+            "Makeup & Style Coaching",
+            "Composition & Background",
+            "Quick Wins - Try These Now!",
+            "Foundational Habits"
+        ]
+    }
+    
+    private func limitedSummarySection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("AI Summary")
+                .font(GlowTypography.glowSubheading.weight(.semibold))
+                .foregroundStyle(GlowPalette.deepRose)
+            Text(summary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Your personalized summary will appear here once we finish processing.")
+                .font(GlowTypography.body(17, weight: .medium))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding()
+        .background(GlowPalette.creamyWhite.opacity(0.12))
+        .cornerRadius(24)
+    }
+    
+    private func limitedRatingsSection(_ analysis: PhotoAnalysisVariables) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Ratings")
+                .font(GlowTypography.glowSubheading.weight(.semibold))
+                .foregroundStyle(GlowPalette.deepRose)
+            
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                ForEach(Array(limitedMetrics(for: analysis).enumerated()), id: \.offset) { _, metric in
+                    limitedMetricCard(icon: metric.icon, title: metric.title, value: metric.value)
+                }
+            }
+        }
+        .padding()
+        .background(GlowPalette.creamyWhite.opacity(0.12))
+        .cornerRadius(24)
+    }
+    
+    private func limitedQuickFactsSection(_ analysis: PhotoAnalysisVariables) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Quick Facts")
+                .font(GlowTypography.glowSubheading.weight(.semibold))
+                .foregroundStyle(GlowPalette.deepRose)
+            
+            VStack(spacing: 10) {
+                if let faceShape = analysis.faceShape?.trimmingCharacters(in: .whitespacesAndNewlines), !faceShape.isEmpty {
+                    limitedFactRow(icon: "face.smiling", title: "Face Shape", value: faceShape)
+                }
+                if let eyeColor = analysis.eyeColor?.trimmingCharacters(in: .whitespacesAndNewlines), !eyeColor.isEmpty {
+                    limitedFactRow(icon: "eye.fill", title: "Eye Color", value: eyeColor)
+                }
+            }
+            .padding(16)
+            .background(GlowPalette.softBeige.opacity(0.92))
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .padding()
+        .background(GlowPalette.creamyWhite.opacity(0.12))
+        .cornerRadius(24)
+    }
+    
+    private func limitedLockedSection(title: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "lock.fill")
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
+                Text(title)
+                    .font(GlowTypography.glowSubheading)
+                    .foregroundStyle(GlowPalette.deepRose)
+            }
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(GlowPalette.creamyWhite.opacity(0.08))
+                .overlay(
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Locked in Full Analysis")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(GlowPalette.deepRose.opacity(0.9))
+                        Text("Unlock GlowUp Pro to see the full breakdown and daily plan.")
+                            .font(GlowTypography.body())
+                            .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
+                    }
+                    .padding()
+                )
+                .frame(height: 110)
+        }
+        .padding()
+        .background(GlowPalette.creamyWhite.opacity(0.06))
+        .cornerRadius(20)
+    }
+    
+    private var limitedUnlockButton: some View {
+        Button {
+            SuperwallService.shared.registerEvent("post_paywall_education")
+        } label: {
+            Text("Unlock Full Analysis")
+                .font(GlowTypography.glowSubheading)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(
+                    LinearGradient(
+                        colors: [
+                            GlowPalette.blushPink,
+                            GlowPalette.roseGold.opacity(0.9)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .foregroundStyle(GlowPalette.deepRose)
+                .cornerRadius(16)
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private func limitedMetrics(for analysis: PhotoAnalysisVariables) -> [(icon: String, title: String, value: String)] {
+        func formatted(_ value: Double) -> String {
+            String(format: "%.1f / 10", value)
+        }
+        
+        return [
+            ("sparkles", "Glow Score", formatted(analysis.overallGlowScore)),
+            ("heart.fill", "Confidence", formatted(analysis.confidenceScore)),
+            ("faceid", "Facial Harmony", formatted(analysis.facialHarmonyScore)),
+            ("paintpalette", "Color Harmony", formatted(analysis.colorHarmony)),
+            ("rectangle.split.3x3", "Composition", formatted(analysis.overallComposition)),
+            ("light.max", "Lighting Quality", formatted(analysis.lightingQuality)),
+            ("triangle.fill", "Angle Definition", formatted(analysis.facialAngularityScore)),
+            ("drop.circle", "Skin Texture", formatted(analysis.skinTextureScore)),
+            ("figure.stand", "Pose Naturalness", formatted(analysis.poseNaturalness)),
+            ("camera.aperture", "Angle Flattery", formatted(analysis.angleFlatter)),
+            ("wand.and.stars", "Makeup Suitability", formatted(analysis.makeupSuitability)),
+            ("line.3.horizontal.decrease.circle", "Brows", formatted(analysis.eyebrowDensityScore)),
+            ("hanger", "Outfit Match", formatted(analysis.outfitColorMatch)),
+            ("sparkle.magnifyingglass", "Accessory Balance", formatted(analysis.accessoryBalance)),
+            ("photo.artframe", "Background", formatted(analysis.backgroundSuitability))
+        ]
+    }
+    
+    private func limitedMetricCard(icon: String, title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .foregroundStyle(GlowPalette.deepRose)
+                Text(title.uppercased())
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
+            }
+            Text(value)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(GlowPalette.deepRose)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(GlowPalette.creamyWhite.opacity(0.08))
+        .cornerRadius(16)
+    }
+    
+    private func limitedFactRow(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.glowSubheading)
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(GlowTypography.caption.weight(.semibold))
+                    .foregroundStyle(GlowPalette.deepRose.opacity(0.6))
+                Text(value)
+                    .font(GlowTypography.body(17, weight: .semibold))
+                    .foregroundStyle(GlowPalette.deepRose)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+    
+    private var isLimitedExperience: Bool {
+        !subscriptionManager.isSubscribed && hasUsedFreeScan
+    }
     
     private func overallScoresSection(_ analysis: PhotoAnalysisVariables) -> some View {
         VStack(spacing: 16) {
@@ -128,7 +339,7 @@ struct DetailedAnalysisView: View {
                 }
             }
             .padding()
-            .background(Color.white.opacity(0.1))
+            .background(GlowPalette.softBeige)
             .cornerRadius(16)
         }
     }
@@ -144,7 +355,7 @@ struct DetailedAnalysisView: View {
                 infoRow(title: "Exposure", value: analysis.exposure)
             }
             .padding()
-            .background(Color.white.opacity(0.1))
+            .background(GlowPalette.softBeige)
             .cornerRadius(16)
         }
     }
@@ -161,7 +372,7 @@ struct DetailedAnalysisView: View {
                 scoreRow(title: "Background", score: analysis.backgroundSuitability, total: 10)
             }
             .padding()
-            .background(Color.white.opacity(0.1))
+            .background(GlowPalette.softBeige)
             .cornerRadius(16)
         }
     }
@@ -177,7 +388,7 @@ struct DetailedAnalysisView: View {
                 infoRow(title: "Eye Contact", value: analysis.eyeContact)
             }
             .padding()
-            .background(Color.white.opacity(0.1))
+            .background(GlowPalette.softBeige)
             .cornerRadius(16)
         }
     }
@@ -222,14 +433,14 @@ struct DetailedAnalysisView: View {
         VStack(spacing: 20) {
             Image(systemName: "wifi.exclamationmark")
                 .font(.largeTitle)
-                .foregroundColor(.yellow)
+                .foregroundStyle(GlowPalette.roseGold)
             Text("We couldn't refresh your analysis because GPT-4 Vision wasn't reachable.")
-                .font(.headline)
-                .foregroundColor(.white)
+                .font(.glowSubheading)
+                .deepRoseText()
                 .multilineTextAlignment(.center)
             Text("Drop your OpenAI key into Secrets.plist (OPENAI_API_KEY) or set it via environment variables, then re-run a photo to regenerate your personalized insights.")
                 .font(.subheadline)
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
                 .multilineTextAlignment(.center)
         }
         .padding(32)
@@ -243,14 +454,14 @@ struct DetailedAnalysisView: View {
                 .font(.system(size: 36, weight: .bold))
                 .foregroundColor(color)
             Text(title)
-                .font(.caption)
-                .foregroundColor(.white.opacity(0.8))
+                .font(.glowBody)
+                .deepRoseText()
             
             // Progress bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.white.opacity(0.2))
+                        .fill(GlowPalette.creamyWhite.opacity(0.2))
                     RoundedRectangle(cornerRadius: 4)
                         .fill(color)
                         .frame(width: geo.size.width * (score / 10))
@@ -260,41 +471,44 @@ struct DetailedAnalysisView: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color.white.opacity(0.1))
+        .background(GlowPalette.softBeige)
         .cornerRadius(16)
     }
     
     private func sectionHeader(title: String, icon: String, color: Color) -> some View {
-        HStack {
+        HStack(spacing: 12) {
             Image(systemName: icon)
-                .foregroundColor(color)
+                .font(.glowHeading)
+                .foregroundStyle(GlowPalette.roseGold)
+            
             Text(title)
-                .font(.headline)
-                .foregroundColor(.white)
+                .font(GlowTypography.glowSubheading)
+                .foregroundStyle(GlowPalette.deepRose)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     
     private func scoreRow(title: String, score: Double, total: Double) -> some View {
         HStack {
             Text(title)
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.9))
+                .font(GlowTypography.glowBody)
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.9))
             Spacer()
             Text(String(format: "%.1f/%g", score, total))
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(scoreColor(for: score, total: total))
+                .font(GlowTypography.glowBody)
+                .foregroundStyle(GlowPalette.deepRose)
         }
     }
     
     private func infoRow(title: String, value: String) -> some View {
         HStack {
             Text(title)
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.9))
+                .font(GlowTypography.glowBody)
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.9))
             Spacer()
             Text(value)
-                .font(.subheadline.weight(.medium))
-                .foregroundColor(.white)
+                .font(GlowTypography.glowBody)
+                .foregroundStyle(GlowPalette.deepRose)
         }
     }
     
@@ -302,9 +516,9 @@ struct DetailedAnalysisView: View {
         HStack {
             Image(systemName: seasonIcon(season))
             Text("\(season) Season")
-                .font(.headline)
+                .font(.glowSubheading)
         }
-        .foregroundColor(.white)
+        .deepRoseText()
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(seasonColor(season))
@@ -314,14 +528,14 @@ struct DetailedAnalysisView: View {
     private func colorList(title: String, colors: [String], positive: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(.white.opacity(0.8))
+                .font(.glowSubheading.weight(.semibold))
+                .deepRoseText()
             
             FlowLayout(spacing: 8) {
                 ForEach(colors, id: \.self) { color in
                     Text(color)
-                        .font(.caption)
-                        .foregroundColor(.white)
+                        .font(.glowBody)
+                        .deepRoseText()
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(positive ? Color.green.opacity(0.3) : Color.red.opacity(0.3))
@@ -337,8 +551,8 @@ struct DetailedAnalysisView: View {
                 Image(systemName: icon)
                     .foregroundColor(color)
                 Text(title)
-                    .font(.headline)
-                    .foregroundColor(.white)
+                    .font(.glowSubheading)
+                    .deepRoseText()
             }
             
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
@@ -346,13 +560,13 @@ struct DetailedAnalysisView: View {
                     Text("•")
                         .foregroundColor(color)
                     Text(item)
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.9))
+                        .font(.glowBody)
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.9))
                 }
             }
         }
         .padding()
-        .background(Color.white.opacity(0.1))
+        .background(GlowPalette.softBeige)
         .cornerRadius(16)
     }
     
@@ -360,13 +574,13 @@ struct DetailedAnalysisView: View {
         VStack(spacing: 16) {
             Image(systemName: "photo.badge.checkmark")
                 .font(.system(size: 64))
-                .foregroundColor(.white.opacity(0.5))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.5))
             Text("No Analysis Yet")
-                .font(.title2.weight(.semibold))
-                .foregroundColor(.white)
+                .font(.glowHeading)
+                .deepRoseText()
             Text("Upload a photo to see your detailed analysis")
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.7))
+                .font(.glowBody)
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                 .multilineTextAlignment(.center)
         }
         .padding()

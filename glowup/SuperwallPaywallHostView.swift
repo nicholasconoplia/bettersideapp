@@ -140,15 +140,15 @@ struct SuperwallPaywallHostView: View {
     private var loadingOverlay: some View {
         VStack(spacing: 16) {
             ProgressView()
-                .tint(.white)
+                .tint(GlowPalette.roseGold)
                 .scaleEffect(1.15)
             Text("Preparing your GlowUp offers…")
-                .font(.headline)
-                .foregroundStyle(.white)
+                .font(.glowSubheading)
+                .deepRoseText()
             Text("If Superwall is unavailable we’ll show the built-in trial screen automatically.")
                 .font(.footnote)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
         }
         .padding(24)
         .background(.ultraThinMaterial.opacity(0.35))

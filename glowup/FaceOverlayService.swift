@@ -7,6 +7,11 @@
 
 import UIKit
 import Vision
+
+private extension UIColor {
+    static var glowCreamyWhite: UIColor { UIColor(red: 0.9843, green: 0.9804, blue: 0.9608, alpha: 1.0) }
+    static var glowDeepRose: UIColor { UIColor(red: 0.5765, green: 0.3098, blue: 0.3608, alpha: 1.0) }
+}
 import CoreImage
 import ImageIO
 
@@ -652,7 +657,7 @@ actor FaceOverlayService {
         let text = confidenceText
         let attributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.boldSystemFont(ofSize: 32),  // Larger font
-            .foregroundColor: UIColor.white,
+            .foregroundColor: UIColor.glowCreamyWhite,
             .strokeColor: UIColor(red: 0.94, green: 0.34, blue: 0.56, alpha: 1.0),
             .strokeWidth: -4.0  // Thicker stroke
         ]
@@ -681,7 +686,7 @@ actor FaceOverlayService {
         context.fillPath()
         
         // Draw border
-        context.setStrokeColor(UIColor.white.withAlphaComponent(0.5).cgColor)
+        context.setStrokeColor(UIColor.glowCreamyWhite.withAlphaComponent(0.5).cgColor)
         context.setLineWidth(2.0)
         context.addPath(backgroundPath.cgPath)
         context.strokePath()

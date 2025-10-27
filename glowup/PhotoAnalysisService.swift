@@ -18,8 +18,6 @@ struct AnalysisPipelineResult {
 final class PhotoAnalysisService {
     private let persistenceController: PersistenceController
     private let openAIService: OpenAIService
-    private let faceOverlayService = FaceOverlayService()
-
     init(
         persistenceController: PersistenceController,
         openAIService: OpenAIService = .shared
@@ -34,15 +32,6 @@ final class PhotoAnalysisService {
         quiz: QuizResult?
     ) async -> AnalysisPipelineResult {
         let context = persistenceController.viewContext
-        
-        // Create annotated image with face overlay
-        var annotatedImageData: Data?
-        if let originalImage = UIImage(data: bundle.face) {
-            if let faceResult = try? await faceOverlayService.analyzeAndAnnotateImage(originalImage) {
-                annotatedImageData = faceResult.annotatedImage.jpegData(compressionQuality: 0.85)
-                print("[PhotoAnalysisService] Face overlay created - Shape: \(faceResult.faceShape)")
-            }
-        }
         
         let input = PhotoAnalysisInput(
             persona: persona,
@@ -78,10 +67,8 @@ final class PhotoAnalysisService {
             print("[PhotoAnalysisService] Skipping profile update due to fallback analysis.")
         }
         
-        // Store annotated image
-        if let annotatedImageData = annotatedImageData {
-            UserDefaults.standard.set(annotatedImageData, forKey: "LatestAnnotatedImage")
-        }
+        // Store original photo for review screens (overlay removed per user feedback)
+        UserDefaults.standard.set(bundle.face, forKey: "LatestAnnotatedImage")
 
         if analysis.isFallback {
             context.delete(session)

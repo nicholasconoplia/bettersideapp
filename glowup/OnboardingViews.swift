@@ -301,7 +301,7 @@ final class OnboardingExperienceViewModel: ObservableObject {
         goToStep(.loading)
         startLoadingSequence { [weak self] in
             guard let self else { return }
-            self.goToStep(.valueComparison)
+            self.goToStep(.glowPromise)
         }
     }
 
@@ -782,70 +782,68 @@ private struct GlowPromiseStepView: View {
     @State private var currentStroke = SignatureStroke(points: [])
 
     private let commitments = [
-        "I’ll nurture my glow with daily consistency.",
-        "I’ll treat my routines as a promise to future me.",
-        "I’ll be kind to myself when progress feels slow.",
-        "I’ll celebrate every small win along the way.",
-        "I’ll show up even when the mirror feels intimidating."
+        "I'll achieve my goal!",
+        "I'll make the most of my day!",
+        "I'll be worry-free!",
+        "I'll be the best version of myself!"
     ]
 
     var body: some View {
         GlowOnboardingScreen(
-            title: "Let’s make a Glow promise",
-            subtitle: "A little commitment keeps motivation bright.",
-            primaryTitle: "I’m in",
+            title: "Let's make your Glow contract",
+            subtitle: nil,
+            primaryTitle: "Seal my Glow contract",
             primaryEnabled: hasSignature,
-            secondaryTitle: hasSignature ? "Reset signature" : nil,
+            secondaryTitle: hasSignature ? "Clear signature" : nil,
             onPrimary: { flowModel.goToNextStep() },
             onSecondary: hasSignature ? { resetSignature() } : nil,
             layout: .leading,
-            isContentScrollable: true
+            isContentScrollable: false
         ) {
             VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Image(systemName: "sparkling.heart.fill")
-                        .font(.system(size: 32, weight: .semibold))
-                        .foregroundStyle(GlowPalette.blushPink, GlowPalette.deepRose)
-
-                    Text("I commit to:")
-                        .font(GlowTypography.body(17, weight: .semibold))
-                        .foregroundStyle(GlowPalette.deepRose.opacity(0.85))
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach(commitments, id: \.self) { statement in
-                            HStack(alignment: .top, spacing: 10) {
-                                Image(systemName: "sparkle")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(GlowPalette.roseGold.opacity(0.9))
-                                    .padding(.top, 4)
-                                Text(statement)
-                                    .font(GlowTypography.body(15))
-                                    .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Sign with your fingertip")
-                        .font(GlowTypography.body(15, weight: .semibold))
-                        .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
-
-                    SignaturePad(strokes: $strokes, currentStroke: $currentStroke)
-                        .frame(height: 180)
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .stroke(GlowPalette.roseGold.opacity(0.35), lineWidth: 1.2)
-                        )
-
-                    Text("Your signature is for accountability only and isn’t stored.")
-                        .font(GlowTypography.caption)
-                        .foregroundStyle(GlowPalette.deepRose.opacity(0.5))
-                }
+                commitmentsList
+                signatureSection
             }
             .padding(.bottom, 12)
+        }
+    }
+
+    private var commitmentsList: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(commitments, id: \.self) { statement in
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text("•")
+                        .font(GlowTypography.body(17, weight: .semibold))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.8))
+                    Text(statement)
+                        .font(GlowTypography.body(15))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private var signatureSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Sign your name using finger:")
+                .font(GlowTypography.body(15, weight: .semibold))
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
+
+            SignaturePad(strokes: $strokes, currentStroke: $currentStroke)
+                .frame(height: 190)
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(GlowPalette.creamyWhite.opacity(0.95))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(GlowPalette.roseGold.opacity(0.35), lineWidth: 1.2)
+                )
+
+            Text("*Your signature will not be recorded")
+                .font(GlowTypography.caption)
+                .foregroundStyle(GlowPalette.deepRose.opacity(0.5))
         }
     }
 
