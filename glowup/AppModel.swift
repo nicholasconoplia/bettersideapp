@@ -102,6 +102,13 @@ final class AppModel: ObservableObject {
         isBootstrapping = false
         await subscriptionManager.refreshProductsIfNeeded()
         await subscriptionManager.refreshEntitlementState()
+        // Ensure notifications reflect current entitlement state
+        if isSubscribed {
+            RoadmapNotificationManager.shared.cancelDailyNonSubscriberNudges()
+        } else {
+            RoadmapNotificationManager.shared.requestAuthorizationIfNeeded()
+            RoadmapNotificationManager.shared.scheduleDailyNonSubscriberNudges()
+        }
     }
 
     func markOnboardingComplete() {
@@ -183,6 +190,10 @@ final class AppModel: ObservableObject {
         self.isSubscribed = isSubscribed
         if !isSubscribed {
             RoadmapNotificationManager.shared.cancelRoadmapReminders()
+            RoadmapNotificationManager.shared.requestAuthorizationIfNeeded()
+            RoadmapNotificationManager.shared.scheduleDailyNonSubscriberNudges()
+        } else {
+            RoadmapNotificationManager.shared.cancelDailyNonSubscriberNudges()
         }
         // If the user already has an active subscription, skip onboarding entirely
         if isSubscribed && !onboardingComplete {

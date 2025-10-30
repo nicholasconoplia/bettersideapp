@@ -454,10 +454,7 @@ private struct OnboardingWelcomePlacementStep: View {
         VStack(spacing: 24) {
             Spacer()
             VStack(spacing: 16) {
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .tint(GlowPalette.deepRose)
-                Text("Welcome to GlowUp")
+                Text("Welcome to BetterSide")
                     .font(GlowTypography.heading(32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(GlowPalette.deepRose)
@@ -465,24 +462,26 @@ private struct OnboardingWelcomePlacementStep: View {
                     .font(GlowTypography.body())
                     .multilineTextAlignment(.center)
                     .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
+
+                Button {
+                    guard !hasTriggeredPlacement else { return }
+                    hasTriggeredPlacement = true
+                    // Immediately advance to the first quiz screen
+                    flowModel.goToNextStep()
+                } label: {
+                    Text("Let’s start")
+                        .font(GlowTypography.button)
+                        .frame(maxWidth: .infinity)
+                }
+                .glowRoundedButtonBackground(isEnabled: true)
             }
             Spacer()
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 32)
-        .task {
-            guard !hasTriggeredPlacement else { return }
-            hasTriggeredPlacement = true
-            await presentWelcomePlacement()
-            await MainActor.run {
-                flowModel.goToNextStep()
-            }
-        }
     }
 
-    private func presentWelcomePlacement() async {
-        _ = await SuperwallService.shared.presentAndAwaitDismissal("first_screen", timeoutSeconds: 6)
-    }
+    // First screen Superwall placement removed per request
 }
 
 private struct SkinTypeStepView: View {
@@ -491,10 +490,13 @@ private struct SkinTypeStepView: View {
     var body: some View {
         GlowOnboardingScreen(
             title: "What best describes your skin type?",
-            subtitle: "We use this to customize your plan’s balance and recommendations.",
+            subtitle: nil,
             primaryTitle: "Continue",
-            primaryEnabled: !flowModel.selectedSkinTypes.isEmpty,
-            onPrimary: { flowModel.goToNextStep() }
+            primaryEnabled: true,
+            secondaryTitle: "Skip quiz",
+            onPrimary: { flowModel.goToNextStep() },
+            onSecondary: { flowModel.goToStep(.name) },
+            customTitleFont: GlowTypography.heading(26, weight: .bold)
         ) {
             VStack(spacing: 12) {
                 ForEach(OnboardingExperienceViewModel.SkinTypeOption.allCases) { option in
@@ -517,8 +519,10 @@ private struct BeautyGoalsStepView: View {
             title: "What are your top goals?",
             subtitle: "Select all that apply.",
             primaryTitle: "Continue",
-            primaryEnabled: !flowModel.selectedGoals.isEmpty,
-            onPrimary: { flowModel.goToNextStep() }
+            primaryEnabled: true,
+            secondaryTitle: "Skip quiz",
+            onPrimary: { flowModel.goToNextStep() },
+            onSecondary: { flowModel.goToStep(.name) }
         ) {
             VStack(spacing: 12) {
                 ForEach(OnboardingExperienceViewModel.BeautyGoalOption.allCases) { option in
@@ -542,7 +546,9 @@ private struct TimeCommitmentStepView: View {
             subtitle: "We’ll match your plan depth to your schedule.",
             primaryTitle: "Continue",
             primaryEnabled: true,
-            onPrimary: { flowModel.goToNextStep() }
+            secondaryTitle: "Skip quiz",
+            onPrimary: { flowModel.goToNextStep() },
+            onSecondary: { flowModel.goToStep(.name) }
         ) {
             VStack(spacing: 32) {
                 Text("\(Int(flowModel.dailyTime.rounded())) min")
@@ -585,8 +591,10 @@ private struct LifestyleInputsStepView: View {
             title: "Help us personalize your plan",
             subtitle: nil,
             primaryTitle: "Continue",
-            primaryEnabled: flowModel.hasAdjustedSleep && flowModel.confidenceLevel != nil,
+            primaryEnabled: true,
+            secondaryTitle: "Skip quiz",
             onPrimary: { flowModel.goToNextStep() },
+            onSecondary: { flowModel.goToStep(.name) },
             layout: .center,
             additionalBottomPadding: 32
         ) {
@@ -641,7 +649,9 @@ private struct SummaryConfirmationStepView: View {
             subtitle: "You can update this later in Profile. We’ll confirm your name next.",
             primaryTitle: "Generate my plan",
             primaryEnabled: true,
+            secondaryTitle: "Skip quiz",
             onPrimary: { flowModel.goToNextStep() },
+            onSecondary: { flowModel.goToStep(.name) },
             primaryButtonPulse: showPulse
         ) {
             VStack(alignment: .leading, spacing: 16) {
@@ -700,19 +710,36 @@ private struct SummaryConfirmationStepView: View {
 private struct NameCaptureStepView: View {
     @EnvironmentObject private var flowModel: OnboardingExperienceViewModel
     @EnvironmentObject private var appModel: AppModel
+    @FocusState private var nameFieldFocused: Bool
 
     var body: some View {
         GlowOnboardingScreen(
             title: "What should we call you?",
             subtitle: "Your name personalizes your dashboard and plan updates.",
             primaryTitle: "Generate my plan",
-            primaryEnabled: !flowModel.userName.trimmingCharacters(in: .whitespaces).isEmpty,
-            onPrimary: { flowModel.beginPlanGeneration(appModel: appModel) }
+            primaryEnabled: true,
+            secondaryTitle: nil,
+            onPrimary: {
+                nameFieldFocused = false
+                #if canImport(UIKit)
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                #endif
+                flowModel.beginPlanGeneration(appModel: appModel)
+            },
+            onSecondary: nil
         ) {
             VStack(spacing: 16) {
                 TextField("Your name", text: $flowModel.userName)
                     .textInputAutocapitalization(.words)
                     .disableAutocorrection(true)
+                    .focused($nameFieldFocused)
+                    .submitLabel(.done)
+                    .onSubmit {
+                        nameFieldFocused = false
+                        #if canImport(UIKit)
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        #endif
+                    }
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -738,7 +765,9 @@ private struct PlanLoadingStepView: View {
             subtitle: nil,
             primaryTitle: "Continue",
             primaryEnabled: flowModel.loadingState == .finished,
-            onPrimary: { flowModel.goToNextStep() }
+            secondaryTitle: "Skip quiz",
+            onPrimary: { flowModel.goToNextStep() },
+            onSecondary: { flowModel.goToStep(.name) }
         ) {
             VStack(spacing: 24) {
                 VStack(alignment: .leading, spacing: 16) {
@@ -862,6 +891,7 @@ private struct GlowPromiseStepView: View {
 
 private struct ValueComparisonStepView: View {
     @EnvironmentObject private var flowModel: OnboardingExperienceViewModel
+    @EnvironmentObject private var appModel: AppModel
     @State private var showBenefits = false
 
     private struct AnimatedRow: View {
@@ -915,14 +945,15 @@ private struct ValueComparisonStepView: View {
             subtitle: nil,
             primaryTitle: "View my Glow map",
             primaryEnabled: true,
-            secondaryTitle: "Skip for now",
+            secondaryTitle: "Try limited version",
             onPrimary: { presentPaywallAndAdvance() },
             onSecondary: {
                 flowModel.markLimitedMode()
-                flowModel.goToNextStep()
+                appModel.markOnboardingComplete()
             },
             layout: .leading,
-            isContentScrollable: true
+            isContentScrollable: true,
+            footerSpacing: 4
         ) {
             VStack(alignment: .leading, spacing: 14) {
                 animatedPainPoints
@@ -1017,7 +1048,8 @@ private struct SocialProofStepView: View {
             subtitle: nil,
             primaryTitle: "Continue",
             primaryEnabled: true,
-            onPrimary: { flowModel.goToNextStep() }
+            onPrimary: { flowModel.goToNextStep() },
+            onSecondary: nil
         ) {
             VStack(spacing: 16) {
                 ForEach(quotes) { quote in
@@ -1027,7 +1059,7 @@ private struct SocialProofStepView: View {
                 Button {
                     requestReview()
                 } label: {
-                    Text("Share your story")
+                    Text("Leave a review")
                         .font(GlowTypography.button)
                         .frame(maxWidth: .infinity)
                 }
@@ -1057,17 +1089,13 @@ private struct FaceScanStepView: View {
             title: "Face Scan",
             subtitle: "Enjoy one complimentary scan. Results stay blurred until you unlock the full experience.",
             primaryTitle: "Continue",
-            primaryEnabled: flowModel.faceScanState == .complete || flowModel.faceScanState == .skipped,
-            secondaryTitle: flowModel.faceScanState == .complete ? nil : "Skip scan",
+            primaryEnabled: true,
+            secondaryTitle: "Skip quiz",
             onPrimary: {
                 flowModel.persistAvatar(appModel: appModel)
                 flowModel.goToNextStep()
             },
-            onSecondary: {
-                flowModel.skipFaceScan()
-                flowModel.persistAvatar(appModel: appModel)
-                flowModel.goToNextStep()
-            }
+            onSecondary: { flowModel.goToStep(.name) }
         ) {
             VStack(spacing: 20) {
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
@@ -1207,6 +1235,8 @@ private struct GlowOnboardingScreen<Content: View>: View {
     let primaryButtonPulse: Bool
     let additionalBottomPadding: CGFloat
     let isContentScrollable: Bool
+    let customTitleFont: Font?
+    let footerSpacing: CGFloat
     let content: Content
 
     init(
@@ -1221,6 +1251,8 @@ private struct GlowOnboardingScreen<Content: View>: View {
         primaryButtonPulse: Bool = false,
         additionalBottomPadding: CGFloat = 0,
         isContentScrollable: Bool = false,
+        customTitleFont: Font? = nil,
+        footerSpacing: CGFloat = 16,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
@@ -1234,6 +1266,8 @@ private struct GlowOnboardingScreen<Content: View>: View {
         self.primaryButtonPulse = primaryButtonPulse
         self.additionalBottomPadding = additionalBottomPadding
         self.isContentScrollable = isContentScrollable
+        self.customTitleFont = customTitleFont
+        self.footerSpacing = footerSpacing
         self.content = content()
     }
 
@@ -1245,15 +1279,19 @@ private struct GlowOnboardingScreen<Content: View>: View {
         VStack(alignment: stackAlignment, spacing: 24) {
             VStack(alignment: stackAlignment, spacing: 12) {
                 Text(title)
-                    .font(GlowTypography.heading(30, weight: .bold))
+                    .font(customTitleFont ?? GlowTypography.heading(30, weight: .bold))
                     .foregroundStyle(GlowPalette.deepRose)
                     .multilineTextAlignment(textAlignment)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity, alignment: layout == .leading ? .leading : .center)
                 if let subtitle {
                     Text(subtitle)
                         .font(GlowTypography.body(16))
                         .foregroundStyle(GlowPalette.deepRose.opacity(0.7))
                         .multilineTextAlignment(textAlignment)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.9)
                     .frame(maxWidth: .infinity, alignment: layout == .leading ? .leading : .center)
                 }
             }
@@ -1270,15 +1308,17 @@ private struct GlowOnboardingScreen<Content: View>: View {
                     .frame(maxWidth: .infinity, alignment: layout == .leading ? .leading : .center)
             }
 
-            Spacer(minLength: 16)
+            Spacer(minLength: footerSpacing)
 
             if let secondaryTitle, let onSecondary {
                 Button(action: onSecondary) {
                     Text(secondaryTitle)
-                        .font(GlowTypography.button)
+                        .font(GlowTypography.body(14))
+                        .foregroundStyle(GlowPalette.deepRose.opacity(0.75))
                         .frame(maxWidth: .infinity)
                 }
-                .glowSecondaryButtonBackground()
+                .buttonStyle(.plain)
+                .padding(.vertical, 4)
             }
 
             Button(action: onPrimary) {
